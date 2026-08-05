@@ -7,13 +7,17 @@ import { initControls, populatePatterns } from './ui/controls.js';
 import { PatternRegistry } from './patterns/registry.js';
 
 const FUTURES_SYMBOLS = {
-    'RTS': 'RTS-9.26',
-    'Si': 'Si-9.26'
+    'RTS': 'RTS-9.26',       // Индекс РТС
+    'Si': 'Si-9.26',         // Доллар-рубль
+    'BR': 'BR-9.26',         // Нефть Brent
+    'GOLD': 'GOLD-9.26'      // Золото
 };
 
 const FUTURES_NAMES = {
     'RTS': 'Индекс РТС',
-    'Si': 'Доллар-рубль'
+    'Si': 'Доллар-рубль',
+    'BR': 'Нефть Brent',
+    'GOLD': 'Золото'
 };
 
 const TIMEFRAMES = {
