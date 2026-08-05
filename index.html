@@ -17,7 +17,7 @@
             <button id="exportBtn" class="btn-export" disabled>📥 Экспорт в Excel</button>
         </header>
 
-        <!-- Панель управления -->
+        <!-- Панель управления: таймфрейм + индикаторы + паттерны -->
         <section class="controls">
             <div class="control-group">
                 <label>Таймфрейм</label>
@@ -39,6 +39,20 @@
             </div>
 
             <button id="scanBtn" class="btn-scan">🚀 Запустить анализ</button>
+        </section>
+
+        <!-- 🔥 ПАТТЕРНЫ — СРАЗУ ПОД ИНДИКАТОРАМИ -->
+        <section class="patterns-section">
+            <details open>
+                <summary>🧩 Паттерны <span class="patterns-count">(выбрано: 0)</span></summary>
+                <div class="patterns-grid" id="patternsContainer">
+                    <!-- Заполняется из JavaScript -->
+                </div>
+                <div class="patterns-actions">
+                    <button id="selectAllPatterns">Выбрать все</button>
+                    <button id="deselectAllPatterns">Снять все</button>
+                </div>
+            </details>
         </section>
 
         <!-- Инструменты: Фьючерсы -->
@@ -67,20 +81,6 @@
                 </summary>
                 <div class="instruments-grid" id="stocksContainer">
                     <!-- Заполняется из JavaScript -->
-                </div>
-            </details>
-        </section>
-
-        <!-- Паттерны -->
-        <section class="patterns-section">
-            <details open>
-                <summary>🧩 Паттерны <span class="patterns-count">(выбрано: 0)</span></summary>
-                <div class="patterns-grid" id="patternsContainer">
-                    <!-- Заполняется из JavaScript -->
-                </div>
-                <div class="patterns-actions">
-                    <button id="selectAllPatterns">Выбрать все</button>
-                    <button id="deselectAllPatterns">Снять все</button>
                 </div>
             </details>
         </section>
