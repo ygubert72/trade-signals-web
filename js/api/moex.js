@@ -1,16 +1,10 @@
 // js/api/moex.js
 
-const MOEX_API = 'https://iss.moex.com/iss/engines/futures/markets/forts/securities';
-
 export async function fetchCandles(symbol, interval, limit = 150) {
     const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities/${symbol}/candles.json`;
-    const params = new URLSearchParams({
-        interval: interval,
-        limit: limit
-    });
 
     try {
-        const response = await fetch(`${url}?${params.toString()}`);
+        const response = await fetch(`${url}?interval=${interval}&limit=${limit}`);
         const data = await response.json();
 
         const candlesData = data?.candles?.data || [];
@@ -25,18 +19,7 @@ export async function fetchCandles(symbol, interval, limit = 150) {
             volume: +candle[5] || 0
         }));
     } catch (error) {
-        console.error(`Ошибка загрузки данных для ${symbol}:`, error);
+        console.error(`Ошибка загрузки ${symbol}:`, error);
         return [];
     }
-}
-
-export async function fetchAllSymbols(symbols, interval, limit = 150) {
-    const results = {};
-    for (const [key, symbol] of Object.entries(symbols)) {
-        const candles = await fetchCandles(symbol, interval, limit);
-        if (candles.length) {
-            results[key] = candles;
-        }
-    }
-    return results;
 }
