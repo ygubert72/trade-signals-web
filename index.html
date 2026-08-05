@@ -1,1 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Торговые сигналы по фьючерсам</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Торговые сигналы по фьючерсам</h1>
+            <p class="subtitle">Анализ на основе EMA, ADX, RSI + паттерны</p>
+        </header>
 
+        <div class="controls">
+            <div class="control-group">
+                <label for="timeframe">Таймфрейм:</label>
+                <select id="timeframe"></select>
+            </div>
+
+            <div class="control-group">
+                <label for="patterns">Паттерны:</label>
+                <select id="patterns" multiple size="3"></select>
+                <small>Удерживайте Ctrl для выбора нескольких</small>
+            </div>
+
+            <button id="refreshBtn">🔄 Обновить сигналы</button>
+        </div>
+
+        <div id="signals-container">
+            <div class="loading">Загрузка сигналов...</div>
+        </div>
+
+        <footer>
+            <p>Данные обновляются при каждом запросе • Сигналы не являются рекомендацией к действию</p>
+        </footer>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
