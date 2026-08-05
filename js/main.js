@@ -7,48 +7,48 @@ import {
     INDICATORS, 
     PATTERNS 
 } from './config.js';
-import { fetchCandles, fetchAllSymbols, getActualFuturesTickers } from './api/moex.js';
+import { fetchCandles, fetchStockCandles, getActualFuturesTickers } from './api/moex.js';
 import { generateSignal } from './signals/generator.js';
 import { PatternRegistry } from './patterns/registry.js';
 import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
 import { exportToExcel } from './utils/excel.js';
 
-// 🔥 Коды активов для автоматического поиска тикеров
+// Коды активов для автоматического поиска тикеров фьючерсов
 const ASSET_CODES = {
     'RTS': 'RTS',
     'Si': 'Si',
     'BR': 'BR',
     'GOLD': 'GOLD',
     'SILV': 'SILV',
-    'PLAT': 'PLT',           // Платина
-    'PALL': 'PLD',           // Палладий
+    'PLAT': 'PLT',
+    'PALL': 'PLD',
     'COPPER': 'COPPER',
     'ALUM': 'ALUM',
-    'NICK': 'NICKEL',        // Никель
-    'WHT': 'WHEAT',          // Пшеница
+    'NICK': 'NICKEL',
+    'WHT': 'WHEAT',
     'CORN': 'CORN',
     'SOYB': 'SOYB',
     'SUGR': 'SUGAR',
-    'COFF': 'COFFEE',        // Кофе
-    'CACA': 'COCOA',         // Какао
-    'COTN': 'COTTON',        // Хлопок
-    'OIL': 'WTI',            // Нефть WTI
-    'GAS': 'NG',             // Природный газ
-    'MX': 'MIX',             // Индекс МосБиржи
+    'COFF': 'COFFEE',
+    'CACA': 'COCOA',
+    'COTN': 'COTTON',
+    'OIL': 'WTI',
+    'GAS': 'NG',
+    'MX': 'MIX',
     'RVI': 'RVI',
-    'ROS': 'ROSN',           // Роснефть
-    'GAZ': 'GAZR',           // Газпром
+    'ROS': 'ROSN',
+    'GAZ': 'GAZR',
     'LKOH': 'LKOH',
-    'SBER': 'SBRF',          // Сбербанк
+    'SBER': 'SBRF',
     'VTBR': 'VTBR',
     'TATN': 'TATN',
-    'NVTK': 'NOTK',          // НОВАТЭК
-    'PLZL': 'PLZL',          // Полюс
+    'NVTK': 'NOTK',
+    'PLZL': 'PLZL',
     'GMKN': 'GMKN'
 };
 
-// Кэш для актуальных тикеров (чтобы не делать запрос каждый раз)
+// Кэш для актуальных тикеров фьючерсов
 let tickersCache = null;
 let tickersCacheTime = null;
 const TICKERS_CACHE_TTL = 60 * 60 * 1000; // 1 час
@@ -93,7 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Рендер инструментов
 function renderInstruments() {
-    // Фьючерсы
     const futuresContainer = document.getElementById('futuresContainer');
     futuresContainer.innerHTML = Object.entries(FUTURES_LIST).map(([key, name]) => `
         <label>
@@ -102,7 +101,6 @@ function renderInstruments() {
         </label>
     `).join('');
 
-    // Акции
     const stocksContainer = document.getElementById('stocksContainer');
     stocksContainer.innerHTML = Object.entries(STOCKS_LIST).map(([key, name]) => `
         <label>
@@ -112,7 +110,7 @@ function renderInstruments() {
     `).join('');
 }
 
-// Рендер паттернов (все выключены)
+// Рендер паттернов
 function renderPatterns() {
     const container = document.getElementById('patternsContainer');
     container.innerHTML = Object.entries(PATTERNS).map(([key, name]) => `
@@ -215,14 +213,12 @@ async function startScan() {
     addLog('🚀 Запуск сканирования...');
     addLog(`📊 Инструментов: ${allSelected.length}, Индикаторов: ${selectedIndicators.length}, Паттернов: ${selectedPatterns.length}`);
 
-    // 🔥 ПОЛУЧАЕМ АКТУАЛЬНЫЕ ТИКЕРЫ
+    // Получаем актуальные тикеры для фьючерсов
     let actualTickers = {};
     if (selectedFutures.length > 0) {
         const tickers = await getTickers();
         if (tickers) {
             actualTickers = tickers;
-        } else {
-            addLog('⚠️ Не удалось получить актуальные тикеры, некоторые фьючерсы могут не работать', 'warning');
         }
     }
 
@@ -237,14 +233,11 @@ async function startScan() {
         let displayName = key;
 
         if (isFutures) {
-            // Используем актуальный тикер, если нашли
             if (actualTickers && actualTickers[key]) {
                 ticker = actualTickers[key];
             } else {
-                // Запасной вариант: пробуем найти в FUTURES_LIST через ASSET_CODES
                 const assetCode = ASSET_CODES[key];
                 if (assetCode) {
-                    // Если не нашли актуальный, используем код как тикер (может не работать)
                     ticker = assetCode;
                     addLog(`⚠️ Для ${key} не найден актуальный тикер, пробую "${ticker}"`, 'warning');
                 }
@@ -258,9 +251,18 @@ async function startScan() {
 
         try {
             const interval = getInterval(state.timeframe);
-            const candles = await fetchCandles(ticker, interval, 150);
+            
+            // 🔥 ВЫБИРАЕМ API В ЗАВИСИМОСТИ ОТ ТИПА
+            let candles;
+            if (isStocks) {
+                // Акции — через специальный API
+                candles = await fetchStockCandles(ticker, interval, 150);
+            } else {
+                // Фьючерсы — через стандартный API
+                candles = await fetchCandles(ticker, interval, 150);
+            }
 
-            if (!candles || candles.length < 50) {
+            if (!candles || candles.length < 30) {
                 addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0} свечей)`, 'warning');
                 processed++;
                 continue;
