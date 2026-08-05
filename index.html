@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Торговые сигналы</title>
+    <title>Торговый сканер</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app">
         <!-- Шапка -->
         <header class="header">
-            <h1>📊 Торговые сигналы</h1>
-            <p class="subtitle">Фьючерсы Московской биржи</p>
+            <div>
+                <h1>📊 Торговый сканер</h1>
+                <p class="subtitle">Фьючерсы и акции Московской биржи</p>
+            </div>
+            <button id="exportBtn" class="btn-export" disabled>📥 Экспорт в Excel</button>
         </header>
 
         <!-- Панель управления -->
@@ -26,23 +29,52 @@
                 </select>
             </div>
 
-            <div class="control-group instruments">
-                <label>Инструменты</label>
-                <div class="instrument-checkboxes">
-                    <label><input type="checkbox" value="RTS" checked> РТС</label>
-                    <label><input type="checkbox" value="Si" checked> Доллар/рубль</label>
-                    <label><input type="checkbox" value="BR" checked> Нефть Brent</label>
-                    <label><input type="checkbox" value="GOLD" checked> Золото</label>
+            <div class="control-group">
+                <label>Индикаторы</label>
+                <div class="checkbox-group" id="indicatorsContainer">
+                    <label><input type="checkbox" value="ema"> EMA (50/100)</label>
+                    <label><input type="checkbox" value="rsi"> RSI (14)</label>
+                    <label><input type="checkbox" value="adx"> ADX (14)</label>
                 </div>
             </div>
 
-            <button id="refreshBtn">Обновить</button>
+            <button id="scanBtn" class="btn-scan">🚀 Запустить анализ</button>
         </section>
 
-        <!-- 🔥 Блок выбора паттернов -->
+        <!-- Инструменты: Фьючерсы -->
+        <section class="instruments-section">
+            <details open>
+                <summary>
+                    <span>📈 Фьючерсы</span>
+                    <label class="select-all-label">
+                        <input type="checkbox" id="selectAllFutures"> Все
+                    </label>
+                </summary>
+                <div class="instruments-grid" id="futuresContainer">
+                    <!-- Заполняется из JavaScript -->
+                </div>
+            </details>
+        </section>
+
+        <!-- Инструменты: Акции -->
+        <section class="instruments-section">
+            <details open>
+                <summary>
+                    <span>🏢 Акции</span>
+                    <label class="select-all-label">
+                        <input type="checkbox" id="selectAllStocks"> Все
+                    </label>
+                </summary>
+                <div class="instruments-grid" id="stocksContainer">
+                    <!-- Заполняется из JavaScript -->
+                </div>
+            </details>
+        </section>
+
+        <!-- Паттерны -->
         <section class="patterns-section">
             <details open>
-                <summary>🧩 Паттерны <span class="patterns-count">(выбрано: все)</span></summary>
+                <summary>🧩 Паттерны <span class="patterns-count">(выбрано: 0)</span></summary>
                 <div class="patterns-grid" id="patternsContainer">
                     <!-- Заполняется из JavaScript -->
                 </div>
@@ -53,9 +85,19 @@
             </details>
         </section>
 
+        <!-- Лог сканирования -->
+        <section class="log-section">
+            <details open>
+                <summary>📋 Лог сканирования</summary>
+                <div class="log-container" id="logContainer">
+                    <div class="log-empty">Ожидание запуска анализа...</div>
+                </div>
+            </details>
+        </section>
+
         <!-- Результаты -->
         <div id="results" class="results">
-            <div class="loading">Загрузка...</div>
+            <div class="loading">📭 Запустите анализ для получения сигналов</div>
         </div>
 
         <!-- Футер -->
