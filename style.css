@@ -15,17 +15,17 @@ body {
 }
 
 .app {
-    max-width: 1400px;
+    max-width: 1440px;
     margin: 0 auto;
 }
 
 /* Шапка */
 .header {
     background: white;
-    padding: 24px 32px;
+    padding: 20px 32px;
     border-radius: 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    margin-bottom: 24px;
+    margin-bottom: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -34,27 +34,47 @@ body {
 }
 
 .header h1 {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 700;
     color: #0f172a;
 }
 
 .header .subtitle {
     color: #64748b;
-    font-size: 15px;
-    font-weight: 400;
+    font-size: 14px;
+}
+
+.btn-export {
+    background: #22c55e;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-export:hover:not(:disabled) {
+    background: #16a34a;
+}
+
+.btn-export:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 /* Панель управления */
 .controls {
     background: white;
-    padding: 20px 28px;
+    padding: 18px 28px;
     border-radius: 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     display: flex;
     flex-wrap: wrap;
-    gap: 24px 40px;
+    gap: 20px 32px;
     align-items: flex-end;
 }
 
@@ -65,7 +85,7 @@ body {
 }
 
 .control-group label {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: #475569;
     text-transform: uppercase;
@@ -77,11 +97,10 @@ body {
     border-radius: 10px;
     border: 1.5px solid #e2e8f0;
     background: white;
-    font-size: 15px;
+    font-size: 14px;
     color: #0f172a;
-    min-width: 140px;
+    min-width: 130px;
     cursor: pointer;
-    transition: border 0.2s;
 }
 
 .control-group select:focus {
@@ -89,36 +108,36 @@ body {
     border-color: #3b82f6;
 }
 
-.instrument-checkboxes {
+.checkbox-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 24px;
+    gap: 8px 16px;
 }
 
-.instrument-checkboxes label {
-    font-size: 14px;
-    font-weight: 500;
+.checkbox-group label {
+    font-size: 13px;
+    font-weight: 400;
     color: #334155;
     text-transform: none;
     letter-spacing: 0;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     cursor: pointer;
 }
 
-.instrument-checkboxes input[type="checkbox"] {
-    width: 17px;
-    height: 17px;
+.checkbox-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
     accent-color: #3b82f6;
     cursor: pointer;
 }
 
-#refreshBtn {
+.btn-scan {
     background: #3b82f6;
     color: white;
     border: none;
-    padding: 10px 32px;
+    padding: 10px 36px;
     border-radius: 10px;
     font-size: 15px;
     font-weight: 600;
@@ -127,34 +146,242 @@ body {
     margin-left: auto;
 }
 
-#refreshBtn:hover {
+.btn-scan:hover {
     background: #2563eb;
+}
+
+.btn-scan:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Инструменты */
+.instruments-section {
+    background: white;
+    border-radius: 16px;
+    padding: 12px 24px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin-bottom: 12px;
+}
+
+.instruments-section details summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 15px;
+    color: #0f172a;
+    cursor: pointer;
+    padding: 6px 0;
+    user-select: none;
+}
+
+.instruments-section details summary .select-all-label {
+    font-weight: 400;
+    font-size: 13px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.instruments-section details summary .select-all-label input {
+    width: 15px;
+    height: 15px;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
+.instruments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 4px 12px;
+    margin-top: 10px;
+    padding: 4px 0;
+}
+
+.instruments-grid label {
+    font-size: 13px;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 3px 0;
+}
+
+.instruments-grid input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
+/* Паттерны */
+.patterns-section {
+    background: white;
+    border-radius: 16px;
+    padding: 12px 24px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin-bottom: 12px;
+}
+
+.patterns-section details summary {
+    font-weight: 600;
+    font-size: 15px;
+    color: #0f172a;
+    cursor: pointer;
+    padding: 6px 0;
+    user-select: none;
+}
+
+.patterns-section details summary .patterns-count {
+    font-weight: 400;
+    color: #94a3b8;
+    font-size: 13px;
+    margin-left: 8px;
+}
+
+.patterns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 4px 20px;
+    margin-top: 10px;
+    padding: 4px 0;
+}
+
+.patterns-grid label {
+    font-size: 13px;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 3px 0;
+}
+
+.patterns-grid input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
+.patterns-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.patterns-actions button {
+    background: #f1f5f9;
+    border: none;
+    padding: 5px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.patterns-actions button:hover {
+    background: #e2e8f0;
+}
+
+/* Лог */
+.log-section {
+    background: white;
+    border-radius: 16px;
+    padding: 12px 24px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin-bottom: 16px;
+}
+
+.log-section details summary {
+    font-weight: 600;
+    font-size: 15px;
+    color: #0f172a;
+    cursor: pointer;
+    padding: 6px 0;
+    user-select: none;
+}
+
+.log-container {
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.6;
+}
+
+.log-container .log-empty {
+    color: #64748b;
+}
+
+.log-container .log-entry {
+    padding: 2px 0;
+    border-bottom: 1px solid #1e293b;
+}
+
+.log-container .log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-container .log-time {
+    color: #94a3b8;
+    margin-right: 12px;
+}
+
+.log-container .log-success {
+    color: #4ade80;
+}
+
+.log-container .log-error {
+    color: #f87171;
+}
+
+.log-container .log-warning {
+    color: #fbbf24;
 }
 
 /* Результаты */
 .results {
-    min-height: 200px;
+    min-height: 150px;
+    margin-top: 4px;
 }
 
 .loading {
     text-align: center;
-    padding: 60px 20px;
+    padding: 50px 20px;
     color: #94a3b8;
-    font-size: 16px;
-}
-
-/* Сетка карточек */
-.signals-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 20px;
-}
-
-/* Карточка сигнала */
-.signal-card {
+    font-size: 15px;
     background: white;
     border-radius: 16px;
-    padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* Карточки результатов */
+.signals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.signal-card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px 22px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     border-left: 5px solid #94a3b8;
     transition: transform 0.15s, box-shadow 0.15s;
@@ -181,17 +408,17 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .signal-card .card-header h2 {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
     color: #0f172a;
 }
 
 .signal-card .card-header .badge {
-    font-size: 12px;
+    font-size: 11px;
     background: #f1f5f9;
     color: #475569;
     padding: 2px 12px;
@@ -199,14 +426,14 @@ body {
 }
 
 .signal-card .price {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     color: #0f172a;
-    margin: 4px 0 12px 0;
+    margin: 2px 0 10px 0;
 }
 
 .signal-card .price span {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     color: #94a3b8;
     margin-left: 4px;
@@ -215,17 +442,17 @@ body {
 .signal-card .signal-row {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 12px 0;
+    gap: 12px;
+    padding: 10px 0;
     border-top: 1px solid #f1f5f9;
     border-bottom: 1px solid #f1f5f9;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .signal-card .signal-badge {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
-    padding: 2px 16px;
+    padding: 2px 14px;
     border-radius: 8px;
 }
 
@@ -246,25 +473,25 @@ body {
 
 .signal-card .signal-desc {
     color: #475569;
-    font-size: 14px;
+    font-size: 13px;
 }
 
-/* Индикаторы */
+/* Индикаторы в карточке */
 .indicators-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 4px 20px;
-    margin-top: 10px;
-    padding: 12px 16px;
+    gap: 2px 16px;
+    margin-top: 8px;
+    padding: 10px 14px;
     background: #f8fafc;
-    border-radius: 10px;
+    border-radius: 8px;
 }
 
 .indicators-grid .ind-item {
     display: flex;
     justify-content: space-between;
-    padding: 4px 0;
-    font-size: 14px;
+    padding: 3px 0;
+    font-size: 13px;
 }
 
 .indicators-grid .ind-item .label {
@@ -276,9 +503,9 @@ body {
     color: #0f172a;
 }
 
-/* Паттерны */
+/* Паттерны в карточке */
 .patterns-list {
-    margin-top: 10px;
+    margin-top: 8px;
     padding: 0;
     list-style: none;
 }
@@ -286,17 +513,17 @@ body {
 .patterns-list li {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 12px;
+    gap: 8px;
+    padding: 4px 12px;
     background: #f8fafc;
     border-radius: 8px;
-    margin-bottom: 4px;
-    font-size: 14px;
+    margin-bottom: 3px;
+    font-size: 13px;
 }
 
 .patterns-list .p-signal {
     font-weight: 700;
-    font-size: 12px;
+    font-size: 11px;
     padding: 1px 10px;
     border-radius: 12px;
 }
@@ -317,7 +544,7 @@ body {
 }
 
 .patterns-list .p-conf {
-    font-size: 12px;
+    font-size: 11px;
     color: #64748b;
 }
 
@@ -327,19 +554,24 @@ body {
 
 /* Футер */
 .footer {
-    margin-top: 32px;
+    margin-top: 24px;
     text-align: center;
     color: #94a3b8;
-    font-size: 13px;
-    padding: 16px 0;
+    font-size: 12px;
+    padding: 12px 0;
 }
 
 /* Адаптив */
-@media (max-width: 700px) {
+@media (max-width: 768px) {
     body { padding: 12px; }
     .header { flex-direction: column; align-items: flex-start; }
     .controls { flex-direction: column; align-items: stretch; }
-    #refreshBtn { margin-left: 0; }
+    .btn-scan { margin-left: 0; }
     .signals-grid { grid-template-columns: 1fr; }
-    .instrument-checkboxes { flex-wrap: wrap; }
+    .instruments-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    .patterns-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+    .patterns-grid { grid-template-columns: 1fr; }
 }
