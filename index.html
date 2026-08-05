@@ -3,37 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📊 Торговые сигналы по фьючерсам</title>
+    <title>Торговые сигналы</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>📊 Торговые сигналы по фьючерсам</h1>
-            <p class="subtitle">Анализ на основе EMA, ADX, RSI + паттерны</p>
+    <div class="app">
+        <!-- Шапка -->
+        <header class="header">
+            <h1>📊 Торговые сигналы</h1>
+            <p class="subtitle">Фьючерсы Московской биржи</p>
         </header>
 
-        <div class="controls">
+        <!-- Панель управления -->
+        <section class="controls">
             <div class="control-group">
-                <label for="timeframe">Таймфрейм:</label>
-                <select id="timeframe"></select>
+                <label>Таймфрейм</label>
+                <select id="timeframe">
+                    <option value="60">1 час</option>
+                    <option value="24" selected>1 день</option>
+                    <option value="7">1 неделя</option>
+                    <option value="31">1 месяц</option>
+                </select>
             </div>
 
-            <div class="control-group">
-                <label for="patterns">Паттерны:</label>
-                <select id="patterns" multiple size="3"></select>
-                <small>Удерживайте Ctrl для выбора нескольких</small>
+            <div class="control-group instruments">
+                <label>Инструменты</label>
+                <div class="instrument-checkboxes">
+                    <label><input type="checkbox" value="RTS" checked> РТС</label>
+                    <label><input type="checkbox" value="Si" checked> Доллар/рубль</label>
+                    <label><input type="checkbox" value="BR" checked> Нефть Brent</label>
+                    <label><input type="checkbox" value="GOLD" checked> Золото</label>
+                </div>
             </div>
 
-            <button id="refreshBtn">🔄 Обновить сигналы</button>
+            <button id="refreshBtn">Обновить</button>
+        </section>
+
+        <!-- Результаты -->
+        <div id="results" class="results">
+            <div class="loading">Загрузка...</div>
         </div>
 
-        <div id="signals-container">
-            <div class="loading">Загрузка сигналов...</div>
-        </div>
-
-        <footer>
-            <p>Данные обновляются при каждом запросе • Сигналы не являются рекомендацией к действию</p>
+        <!-- Футер -->
+        <footer class="footer">
+            <p>Данные с MOEX • Сигналы не являются рекомендацией</p>
         </footer>
     </div>
 
