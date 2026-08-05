@@ -1,106 +1,254 @@
 // js/main.js
 
-import { fetchAllSymbols } from './api/moex.js';
-import { analyzeWithPatterns } from './signals/generator.js';
-import { renderSignals } from './ui/render.js';
-import { initControls, populatePatterns } from './ui/controls.js';
+import { 
+    FUTURES_LIST, STOCKS_LIST, FUTURES_TICKERS, 
+    INDICATORS, PATTERNS 
+} from './config.js';
+import { fetchCandles } from './api/moex.js';
+import { generateSignal } from './signals/generator.js';
 import { PatternRegistry } from './patterns/registry.js';
+import { renderSignals } from './ui/render.js';
+import { addLog, clearLog, showProgress, hideProgress } from './ui/log.js';
+import { exportToExcel } from './utils/excel.js';
 
-const ALL_SYMBOLS = {
-    'RTS': 'RTS-9.26',
-    'Si': 'Si-9.26',
-    'BR': 'BR-9.26',
-    'GOLD': 'GOLD-9.26'
+// Состояние
+let state = {
+    timeframe: '24',
+    indicators: [],
+    patterns: [],
+    futures: [],
+    stocks: [],
+    results: [],
+    isScanning: false
 };
-
-const SYMBOL_NAMES = {
-    'RTS': 'Индекс РТС',
-    'Si': 'Доллар/рубль',
-    'BR': 'Нефть Brent',
-    'GOLD': 'Золото'
-};
-
-const TIMEFRAMES = {
-    '60': '1h',
-    '24': '1d',
-    '7': '1wk',
-    '31': '1mo'
-};
-
-let currentTimeframe = '24';
-let currentInstruments = ['RTS', 'Si', 'BR', 'GOLD'];
-
-export async function loadSignals(timeframe = null, instruments = null) {
-    if (timeframe) currentTimeframe = timeframe;
-    if (instruments) currentInstruments = instruments;
-
-    const container = document.getElementById('results');
-    container.innerHTML = '<div class="loading">⏳ Загрузка...</div>';
-
-    const symbols = {};
-    const names = {};
-    for (const key of currentInstruments) {
-        if (ALL_SYMBOLS[key]) {
-            symbols[key] = ALL_SYMBOLS[key];
-            names[key] = SYMBOL_NAMES[key] || key;
-        }
-    }
-
-    if (Object.keys(symbols).length === 0) {
-        container.innerHTML = '<div class="loading">Выберите хотя бы один инструмент</div>';
-        return;
-    }
-
-    try {
-        const interval = TIMEFRAMES[currentTimeframe] || '1d';
-        const allData = await fetchAllSymbols(symbols, interval, 150);
-        const results = [];
-
-        for (const [key, candles] of Object.entries(allData)) {
-            if (!candles || candles.length < 50) {
-                console.warn(`Недостаточно данных для ${key}`);
-                continue;
-            }
-
-            const selectedPatterns = PatternRegistry.getPatternNames();
-            const analysis = analyzeWithPatterns(candles, selectedPatterns);
-            const lastPrice = candles[candles.length - 1].close;
-
-            results.push({
-                symbol: key,
-                display_name: names[key] || key,
-                timeframe: currentTimeframe,
-                current_price: lastPrice,
-                signal: analysis.signal,
-                signal_description: analysis.description,
-                indicators: analysis.indicators,
-                patterns: analysis.patterns
-            });
-        }
-
-        renderSignals(results);
-    } catch (error) {
-        console.error('Ошибка:', error);
-        container.innerHTML = '<div class="loading">❌ Ошибка загрузки данных</div>';
-    }
-}
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', () => {
-    const patternNames = PatternRegistry.getPatternNames();
-    populatePatterns(patternNames);
-    initControls(loadSignals);
+    renderInstruments();
+    renderPatterns();
+    setupEventListeners();
+});
 
-    // Чекбоксы инструментов
-    document.querySelectorAll('.instrument-checkboxes input').forEach(cb => {
-        cb.addEventListener('change', () => {
-            const selected = [];
-            document.querySelectorAll('.instrument-checkboxes input:checked').forEach(c => {
-                selected.push(c.value);
-            });
-            loadSignals(currentTimeframe, selected);
+// Рендер инструментов
+function renderInstruments() {
+    // Фьючерсы
+    const futuresContainer = document.getElementById('futuresContainer');
+    futuresContainer.innerHTML = Object.entries(FUTURES_LIST).map(([key, name]) => `
+        <label>
+            <input type="checkbox" value="${key}" data-group="futures">
+            ${name}
+        </label>
+    `).join('');
+
+    // Акции
+    const stocksContainer = document.getElementById('stocksContainer');
+    stocksContainer.innerHTML = Object.entries(STOCKS_LIST).map(([key, name]) => `
+        <label>
+            <input type="checkbox" value="${key}" data-group="stocks">
+            ${name}
+        </label>
+    `).join('');
+}
+
+// Рендер паттернов (все выключены)
+function renderPatterns() {
+    const container = document.getElementById('patternsContainer');
+    container.innerHTML = Object.entries(PATTERNS).map(([key, name]) => `
+        <label>
+            <input type="checkbox" value="${key}">
+            ${name}
+        </label>
+    `).join('');
+    updatePatternsCount();
+}
+
+function updatePatternsCount() {
+    const checked = document.querySelectorAll('#patternsContainer input:checked').length;
+    const el = document.querySelector('.patterns-count');
+    if (el) el.textContent = `(выбрано: ${checked})`;
+}
+
+// Настройка событий
+function setupEventListeners() {
+    // Кнопка "Запустить анализ"
+    document.getElementById('scanBtn').addEventListener('click', startScan);
+
+    // Экспорт в Excel
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        exportToExcel(state.results);
+    });
+
+    // "Все фьючерсы"
+    document.getElementById('selectAllFutures').addEventListener('change', (e) => {
+        document.querySelectorAll('#futuresContainer input').forEach(cb => {
+            cb.checked = e.target.checked;
         });
     });
 
-    loadSignals('24', ['RTS', 'Si', 'BR', 'GOLD']);
-});
+    // "Все акции"
+    document.getElementById('selectAllStocks').addEventListener('change', (e) => {
+        document.querySelectorAll('#stocksContainer input').forEach(cb => {
+            cb.checked = e.target.checked;
+        });
+    });
+
+    // Паттерны: выбор всех / снять все
+    document.getElementById('selectAllPatterns').addEventListener('click', () => {
+        document.querySelectorAll('#patternsContainer input').forEach(cb => cb.checked = true);
+        updatePatternsCount();
+    });
+
+    document.getElementById('deselectAllPatterns').addEventListener('click', () => {
+        document.querySelectorAll('#patternsContainer input').forEach(cb => cb.checked = false);
+        updatePatternsCount();
+    });
+
+    // Обновление счётчика паттернов при изменении
+    document.getElementById('patternsContainer').addEventListener('change', updatePatternsCount);
+}
+
+// Основная функция сканирования
+async function startScan() {
+    if (state.isScanning) return;
+
+    // Собираем выбранные инструменты
+    const selectedFutures = [];
+    document.querySelectorAll('#futuresContainer input:checked').forEach(cb => {
+        selectedFutures.push(cb.value);
+    });
+
+    const selectedStocks = [];
+    document.querySelectorAll('#stocksContainer input:checked').forEach(cb => {
+        selectedStocks.push(cb.value);
+    });
+
+    const allSelected = [...selectedFutures, ...selectedStocks];
+
+    if (allSelected.length === 0) {
+        addLog('⚠️ Ошибка: не выбран ни один инструмент', 'error');
+        return;
+    }
+
+    // Собираем индикаторы
+    const selectedIndicators = [];
+    document.querySelectorAll('#indicatorsContainer input:checked').forEach(cb => {
+        selectedIndicators.push(cb.value);
+    });
+
+    if (selectedIndicators.length === 0) {
+        addLog('⚠️ Ошибка: не выбран ни один индикатор', 'error');
+        return;
+    }
+
+    // Собираем паттерны
+    const selectedPatterns = [];
+    document.querySelectorAll('#patternsContainer input:checked').forEach(cb => {
+        selectedPatterns.push(cb.value);
+    });
+
+    // Сохраняем состояние
+    state.indicators = selectedIndicators;
+    state.patterns = selectedPatterns;
+    state.futures = selectedFutures;
+    state.stocks = selectedStocks;
+    state.timeframe = document.getElementById('timeframe').value;
+
+    // Запускаем
+    state.isScanning = true;
+    document.getElementById('scanBtn').disabled = true;
+    document.getElementById('exportBtn').disabled = true;
+    clearLog();
+    addLog('🚀 Запуск сканирования...');
+    addLog(`📊 Инструментов: ${allSelected.length}, Индикаторов: ${selectedIndicators.length}, Паттернов: ${selectedPatterns.length}`);
+
+    const results = [];
+    const total = allSelected.length;
+    let processed = 0;
+
+    for (const key of allSelected) {
+        const isFutures = selectedFutures.includes(key);
+        const isStocks = selectedStocks.includes(key);
+        
+        let ticker = key;
+        let displayName = key;
+
+        if (isFutures) {
+            ticker = FUTURES_TICKERS[key] || key;
+            displayName = FUTURES_LIST[key] || key;
+        } else if (isStocks) {
+            displayName = STOCKS_LIST[key] || key;
+        }
+
+        addLog(`🔍 Анализ ${displayName} (${key})...`);
+
+        try {
+            const interval = getInterval(state.timeframe);
+            const candles = await fetchCandles(ticker, interval, 150);
+
+            if (!candles || candles.length < 50) {
+                addLog(`  ⚠️ ${displayName}: недостаточно данных`, 'warning');
+                processed++;
+                continue;
+            }
+
+            // Генерация сигнала с выбранными индикаторами и паттернами
+            const analysis = generateSignal(candles, {
+                indicators: selectedIndicators,
+                patterns: selectedPatterns
+            });
+
+            const lastPrice = candles[candles.length - 1].close;
+
+            const result = {
+                ticker: key,
+                name: displayName,
+                type: isFutures ? 'Фьючерс' : 'Акция',
+                timeframe: state.timeframe,
+                price: lastPrice,
+                signal: analysis.signal,
+                description: analysis.description,
+                indicators: analysis.indicators || {},
+                patterns: analysis.patterns || []
+            };
+
+            results.push(result);
+
+            if (analysis.signal === 'BUY' || analysis.signal === 'SELL') {
+                addLog(`  ✅ ${displayName}: ${analysis.signal} — ${analysis.description}`, 'success');
+            } else {
+                addLog(`  ⏸️ ${displayName}: ${analysis.signal} — ${analysis.description}`, 'warning');
+            }
+
+        } catch (error) {
+            addLog(`  ❌ ${displayName}: ошибка — ${error.message}`, 'error');
+        }
+
+        processed++;
+        // Обновляем прогресс (можно добавить прогресс-бар позже)
+    }
+
+    state.results = results;
+    state.isScanning = false;
+    document.getElementById('scanBtn').disabled = false;
+
+    const positiveResults = results.filter(r => r.signal === 'BUY' || r.signal === 'SELL');
+    if (positiveResults.length > 0) {
+        document.getElementById('exportBtn').disabled = false;
+        addLog(`📊 Найдено ${positiveResults.length} сигналов (BUY/SELL)`, 'success');
+    } else {
+        addLog('📭 Сигналов не найдено', 'warning');
+    }
+
+    // Рендер результатов
+    renderSignals(results);
+}
+
+function getInterval(timeframe) {
+    const map = {
+        '60': '1h',
+        '24': '1d',
+        '7': '1wk',
+        '31': '1mo'
+    };
+    return map[timeframe] || '1d';
+}
