@@ -1,8 +1,11 @@
 // js/main.js
 
 import { 
-    FUTURES_LIST, STOCKS_LIST, 
-    INDICATORS, PATTERNS 
+    FUTURES_LIST, 
+    STOCKS_LIST, 
+    FUTURES_TICKERS,
+    INDICATORS, 
+    PATTERNS 
 } from './config.js';
 import { fetchCandles, fetchAllSymbols, getActualFuturesTickers } from './api/moex.js';
 import { generateSignal } from './signals/generator.js';
