@@ -9,16 +9,16 @@
 <body>
     <div class="app">
         <!-- Шапка -->
-        <header class="header">
+        <header>
             <div>
                 <h1>📊 Торговый сканер</h1>
-                <p class="subtitle">Фьючерсы и акции Московской биржи</p>
+                <p class="sub">Фьючерсы и акции Московской биржи</p>
             </div>
             <button id="exportBtn" class="btn-export" disabled>📥 Экспорт в Excel</button>
         </header>
 
-        <!-- Панель управления: таймфрейм + индикаторы + паттерны -->
-        <section class="controls">
+        <!-- Управление -->
+        <div class="control-panel">
             <div class="control-group">
                 <label>Таймфрейм</label>
                 <select id="timeframe">
@@ -31,7 +31,7 @@
 
             <div class="control-group">
                 <label>Индикаторы</label>
-                <div class="checkbox-group" id="indicatorsContainer">
+                <div class="checkboxes" id="indicatorsContainer">
                     <label><input type="checkbox" value="ema"> EMA (50/100)</label>
                     <label><input type="checkbox" value="rsi"> RSI (14)</label>
                     <label><input type="checkbox" value="adx"> ADX (14)</label>
@@ -39,71 +39,58 @@
             </div>
 
             <button id="scanBtn" class="btn-scan">🚀 Запустить анализ</button>
-        </section>
+        </div>
 
-        <!-- 🔥 ПАТТЕРНЫ — СРАЗУ ПОД ИНДИКАТОРАМИ -->
-        <section class="patterns-section">
+        <!-- Паттерны -->
+        <div class="section">
             <details open>
-                <summary>🧩 Паттерны <span class="patterns-count">(выбрано: 0)</span></summary>
-                <div class="patterns-grid" id="patternsContainer">
-                    <!-- Заполняется из JavaScript -->
-                </div>
-                <div class="patterns-actions">
+                <summary>🧩 Паттерны <span class="count" id="patternsCount">(выбрано: 0)</span></summary>
+                <div class="grid patterns-grid" id="patternsContainer"></div>
+                <div class="actions">
                     <button id="selectAllPatterns">Выбрать все</button>
                     <button id="deselectAllPatterns">Снять все</button>
                 </div>
             </details>
-        </section>
+        </div>
 
-        <!-- Инструменты: Фьючерсы -->
-        <section class="instruments-section">
+        <!-- Фьючерсы -->
+        <div class="section">
             <details open>
                 <summary>
                     <span>📈 Фьючерсы</span>
-                    <label class="select-all-label">
-                        <input type="checkbox" id="selectAllFutures"> Все
-                    </label>
+                    <label class="all-label"><input type="checkbox" id="selectAllFutures"> Все</label>
                 </summary>
-                <div class="instruments-grid" id="futuresContainer">
-                    <!-- Заполняется из JavaScript -->
-                </div>
+                <div class="grid instruments-grid" id="futuresContainer"></div>
             </details>
-        </section>
+        </div>
 
-        <!-- Инструменты: Акции -->
-        <section class="instruments-section">
+        <!-- Акции -->
+        <div class="section">
             <details open>
                 <summary>
                     <span>🏢 Акции</span>
-                    <label class="select-all-label">
-                        <input type="checkbox" id="selectAllStocks"> Все
-                    </label>
+                    <label class="all-label"><input type="checkbox" id="selectAllStocks"> Все</label>
                 </summary>
-                <div class="instruments-grid" id="stocksContainer">
-                    <!-- Заполняется из JavaScript -->
-                </div>
+                <div class="grid instruments-grid" id="stocksContainer"></div>
             </details>
-        </section>
+        </div>
 
-        <!-- Лог сканирования -->
-        <section class="log-section">
+        <!-- Лог -->
+        <div class="section">
             <details open>
                 <summary>📋 Лог сканирования</summary>
-                <div class="log-container" id="logContainer">
+                <div class="log" id="logContainer">
                     <div class="log-empty">Ожидание запуска анализа...</div>
                 </div>
             </details>
-        </section>
+        </div>
 
         <!-- Результаты -->
         <div id="results" class="results">
-            <div class="loading">📭 Запустите анализ для получения сигналов</div>
+            <div class="empty">📭 Запустите анализ для получения сигналов</div>
         </div>
 
-        <!-- Футер -->
-        <footer class="footer">
-            <p>Данные с MOEX • Сигналы не являются рекомендацией</p>
-        </footer>
+        <footer>Данные с MOEX • Сигналы не являются рекомендацией</footer>
     </div>
 
     <script type="module" src="js/main.js"></script>
