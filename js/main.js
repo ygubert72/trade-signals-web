@@ -21,30 +21,30 @@ const ASSET_CODES = {
     'BR': 'BR',
     'GOLD': 'GOLD',
     'SILV': 'SILV',
-    'PLAT': 'PLAT',
-    'PALL': 'PALL',
+    'PLAT': 'PLT',           // Платина
+    'PALL': 'PLD',           // Палладий
     'COPPER': 'COPPER',
     'ALUM': 'ALUM',
-    'NICK': 'NICK',
-    'WHT': 'WHT',
+    'NICK': 'NICKEL',        // Никель
+    'WHT': 'WHEAT',          // Пшеница
     'CORN': 'CORN',
     'SOYB': 'SOYB',
-    'SUGR': 'SUGR',
-    'COFF': 'COFF',
-    'CACA': 'CACA',
-    'COTN': 'COTN',
-    'OIL': 'OIL',
-    'GAS': 'GAS',
-    'MX': 'MX',
+    'SUGR': 'SUGAR',
+    'COFF': 'COFFEE',        // Кофе
+    'CACA': 'COCOA',         // Какао
+    'COTN': 'COTTON',        // Хлопок
+    'OIL': 'WTI',            // Нефть WTI
+    'GAS': 'NG',             // Природный газ
+    'MX': 'MIX',             // Индекс МосБиржи
     'RVI': 'RVI',
-    'ROS': 'ROS',
-    'GAZ': 'GAZ',
+    'ROS': 'ROSN',           // Роснефть
+    'GAZ': 'GAZR',           // Газпром
     'LKOH': 'LKOH',
-    'SBER': 'SBER',
+    'SBER': 'SBRF',          // Сбербанк
     'VTBR': 'VTBR',
     'TATN': 'TATN',
-    'NVTK': 'NVTK',
-    'PLZL': 'PLZL',
+    'NVTK': 'NOTK',          // НОВАТЭК
+    'PLZL': 'PLZL',          // Полюс
     'GMKN': 'GMKN'
 };
 
