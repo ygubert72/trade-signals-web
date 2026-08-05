@@ -1,64 +1,37 @@
 // js/ui/controls.js
 
-import { loadSignals } from '../main.js';
-
-const TIMEFRAMES = {
-    'Час': '60',
-    'День': '24',
-    'Неделя': '7',
-    'Месяц': '31'
-};
-
-export function initControls() {
-    const timeframeSelect = document.getElementById('timeframe');
-    const patternsSelect = document.getElementById('patterns');
+export function initControls(loadFn) {
+    const timeframe = document.getElementById('timeframe');
     const refreshBtn = document.getElementById('refreshBtn');
 
-    if (timeframeSelect) {
-        // Заполняем таймфреймы
-        Object.keys(TIMEFRAMES).forEach(key => {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = key;
-            if (key === 'День') option.selected = true;
-            timeframeSelect.appendChild(option);
-        });
-
-        timeframeSelect.addEventListener('change', () => {
-            loadSignals(timeframeSelect.value, getSelectedPatterns());
+    if (timeframe) {
+        timeframe.addEventListener('change', () => {
+            const selected = getSelectedInstruments();
+            loadFn(timeframe.value, selected);
         });
     }
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
-            loadSignals(
-                timeframeSelect?.value || 'День',
-                getSelectedPatterns()
-            );
-        });
-    }
-
-    if (patternsSelect) {
-        patternsSelect.addEventListener('change', () => {
-            loadSignals(
-                timeframeSelect?.value || 'День',
-                getSelectedPatterns()
-            );
+            const selected = getSelectedInstruments();
+            loadFn(document.getElementById('timeframe').value, selected);
         });
     }
 }
 
-function getSelectedPatterns() {
-    const patternsSelect = document.getElementById('patterns');
-    if (!patternsSelect) return [];
-    return Array.from(patternsSelect.selectedOptions).map(opt => opt.value);
+function getSelectedInstruments() {
+    const checked = document.querySelectorAll('.instrument-checkboxes input:checked');
+    return Array.from(checked).map(cb => cb.value);
 }
 
 export function populatePatterns(patternNames) {
-    const select = document.getElementById('patterns');
-    if (!select) return;
-
-    select.innerHTML = patternNames.map(name => `
-        <option value="${name}" selected>${name}</option>
-    `).join('');
+    // Паттерны теперь отображаются в карточках, не нужен отдельный select
+    // Но если хотите оставить выбор паттернов — раскомментируйте код ниже
+    /*
+    const container = document.getElementById('patterns-container');
+    if (!container) return;
+    container.innerHTML = patternNames.map(name =>
+        `<label><input type="checkbox" value="${name}" checked> ${name}</label>`
+    ).join('');
+    */
 }
