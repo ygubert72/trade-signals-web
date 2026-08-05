@@ -8,9 +8,9 @@ export function exportToExcel(results) {
         return;
     }
 
-    // Формируем CSV с колонкой "Тикер"
+    // Формируем CSV с колонкой "Тикер" и "Расшифровка вероятности"
     let csv = '\uFEFF'; // BOM для Excel
-    csv += 'Дата;Тикер;Инструмент;Тип;Сигнал;Цена;Рекомендация;Описание;Вероятность\n';
+    csv += 'Дата;Тикер;Инструмент;Тип;Сигнал;Цена;Рекомендация;Описание;Вероятность;Расшифровка вероятности\n';
     const now = new Date().toLocaleString();
 
     positiveResults.forEach(r => {
@@ -20,21 +20,32 @@ export function exportToExcel(results) {
         let probability = 50;
         const adx = r.indicators?.adx || 0;
         const rsi = r.indicators?.rsi || 50;
+        let explanation = 'Базовое значение 50%';
         
         if (adx > 25) {
-            probability += Math.min((adx - 25) * 0.8, 30);
+            const bonus = Math.min((adx - 25) * 0.8, 30);
+            probability += bonus;
+            explanation += ` +${bonus.toFixed(0)}% за тренд (ADX=${adx.toFixed(1)})`;
+        } else {
+            explanation += ` (ADX=${adx.toFixed(1)} < 25 — тренда нет)`;
         }
+        
         if (rsi > 40 && rsi < 60) {
             probability += 10;
+            explanation += ' +10% за откат внутри тренда';
         }
+        
         if (rsi > 70 || rsi < 30) {
             probability -= 10;
+            explanation += ' -10% за экстремум RSI';
         }
+        
         probability = Math.min(Math.max(Math.round(probability), 20), 90);
+        explanation += ` = ${probability}%`;
 
         const desc = `${r.description} | ADX=${adx?.toFixed(1) || 'Н/Д'}, RSI=${rsi?.toFixed(1) || 'Н/Д'}`;
 
-        csv += `${now};${r.ticker};${r.name};${r.type};${r.signal};${r.price.toFixed(2)};${recommendation};${desc};${probability}%\n`;
+        csv += `${now};${r.ticker};${r.name};${r.type};${r.signal};${r.price.toFixed(2)};${recommendation};${desc};${probability}%;${explanation}\n`;
     });
 
     // Скачиваем
