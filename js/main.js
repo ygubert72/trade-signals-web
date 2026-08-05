@@ -6,52 +6,70 @@ import { renderSignals } from './ui/render.js';
 import { initControls, populatePatterns } from './ui/controls.js';
 import { PatternRegistry } from './patterns/registry.js';
 
-const FUTURES_SYMBOLS = {
-    'RTS': 'RTS-9.26',       // Индекс РТС
-    'Si': 'Si-9.26',         // Доллар-рубль
-    'BR': 'BR-9.26',         // Нефть Brent
-    'GOLD': 'GOLD-9.26'      // Золото
+const ALL_SYMBOLS = {
+    'RTS': 'RTS-9.26',
+    'Si': 'Si-9.26',
+    'BR': 'BR-9.26',
+    'GOLD': 'GOLD-9.26'
 };
 
-const FUTURES_NAMES = {
+const SYMBOL_NAMES = {
     'RTS': 'Индекс РТС',
-    'Si': 'Доллар-рубль',
+    'Si': 'Доллар/рубль',
     'BR': 'Нефть Brent',
     'GOLD': 'Золото'
 };
 
 const TIMEFRAMES = {
-    'Час': '60',
-    'День': '24',
-    'Неделя': '7',
-    'Месяц': '31'
+    '60': '1h',
+    '24': '1d',
+    '7': '1wk',
+    '31': '1mo'
 };
 
-export async function loadSignals(timeframeKey = 'День', selectedPatterns = null) {
-    renderSignals([], true);
+let currentTimeframe = '24';
+let currentInstruments = ['RTS', 'Si', 'BR', 'GOLD'];
 
-    const interval = TIMEFRAMES[timeframeKey];
-    if (!selectedPatterns) {
-        selectedPatterns = PatternRegistry.getPatternNames();
+export async function loadSignals(timeframe = null, instruments = null) {
+    if (timeframe) currentTimeframe = timeframe;
+    if (instruments) currentInstruments = instruments;
+
+    const container = document.getElementById('results');
+    container.innerHTML = '<div class="loading">⏳ Загрузка...</div>';
+
+    const symbols = {};
+    const names = {};
+    for (const key of currentInstruments) {
+        if (ALL_SYMBOLS[key]) {
+            symbols[key] = ALL_SYMBOLS[key];
+            names[key] = SYMBOL_NAMES[key] || key;
+        }
+    }
+
+    if (Object.keys(symbols).length === 0) {
+        container.innerHTML = '<div class="loading">Выберите хотя бы один инструмент</div>';
+        return;
     }
 
     try {
-        const allData = await fetchAllSymbols(FUTURES_SYMBOLS, interval, 150);
+        const interval = TIMEFRAMES[currentTimeframe] || '1d';
+        const allData = await fetchAllSymbols(symbols, interval, 150);
         const results = [];
 
-        for (const [symbol, candles] of Object.entries(allData)) {
+        for (const [key, candles] of Object.entries(allData)) {
             if (!candles || candles.length < 50) {
-                console.warn(`Недостаточно данных для ${symbol}`);
+                console.warn(`Недостаточно данных для ${key}`);
                 continue;
             }
 
+            const selectedPatterns = PatternRegistry.getPatternNames();
             const analysis = analyzeWithPatterns(candles, selectedPatterns);
             const lastPrice = candles[candles.length - 1].close;
 
             results.push({
-                symbol: symbol,
-                display_name: FUTURES_NAMES[symbol] || symbol,
-                timeframe: timeframeKey,
+                symbol: key,
+                display_name: names[key] || key,
+                timeframe: currentTimeframe,
                 current_price: lastPrice,
                 signal: analysis.signal,
                 signal_description: analysis.description,
@@ -62,8 +80,8 @@ export async function loadSignals(timeframeKey = 'День', selectedPatterns = 
 
         renderSignals(results);
     } catch (error) {
-        console.error('Ошибка загрузки:', error);
-        renderSignals([]);
+        console.error('Ошибка:', error);
+        container.innerHTML = '<div class="loading">❌ Ошибка загрузки данных</div>';
     }
 }
 
@@ -71,6 +89,18 @@ export async function loadSignals(timeframeKey = 'День', selectedPatterns = 
 document.addEventListener('DOMContentLoaded', () => {
     const patternNames = PatternRegistry.getPatternNames();
     populatePatterns(patternNames);
-    initControls();
-    loadSignals('День');
+    initControls(loadSignals);
+
+    // Чекбоксы инструментов
+    document.querySelectorAll('.instrument-checkboxes input').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const selected = [];
+            document.querySelectorAll('.instrument-checkboxes input:checked').forEach(c => {
+                selected.push(c.value);
+            });
+            loadSignals(currentTimeframe, selected);
+        });
+    });
+
+    loadSignals('24', ['RTS', 'Si', 'BR', 'GOLD']);
 });
