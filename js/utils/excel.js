@@ -8,13 +8,12 @@ export function exportToExcel(results) {
         return;
     }
 
-    // Формируем CSV (совместим с Excel)
+    // Формируем CSV с колонкой "Тикер"
     let csv = '\uFEFF'; // BOM для Excel
-    csv += 'Дата;Инструмент;Тип;Сигнал;Цена;Рекомендация;Описание;Вероятность\n';
+    csv += 'Дата;Тикер;Инструмент;Тип;Сигнал;Цена;Рекомендация;Описание;Вероятность\n';
     const now = new Date().toLocaleString();
 
     positiveResults.forEach(r => {
-        // 🔥 ТОЛЬКО ТЕКСТ: LONG или SHORT
         const recommendation = r.signal === 'BUY' ? 'LONG' : 'SHORT';
         
         // Расчёт вероятности
@@ -35,7 +34,7 @@ export function exportToExcel(results) {
 
         const desc = `${r.description} | ADX=${adx?.toFixed(1) || 'Н/Д'}, RSI=${rsi?.toFixed(1) || 'Н/Д'}`;
 
-        csv += `${now};${r.name};${r.type};${r.signal};${r.price.toFixed(2)};${recommendation};${desc};${probability}%\n`;
+        csv += `${now};${r.ticker};${r.name};${r.type};${r.signal};${r.price.toFixed(2)};${recommendation};${desc};${probability}%\n`;
     });
 
     // Скачиваем
