@@ -1,64 +1,30 @@
-// js/main.js
-
-import { 
-    FUTURES_LIST, 
-    STOCKS_LIST, 
-    FUTURES_TICKERS,
-    INDICATORS, 
-    PATTERNS 
-} from './config.js';
+import { FUTURES_LIST, STOCKS_LIST, INDICATORS, PATTERNS } from './config.js';
 import { fetchCandles, fetchStockCandles, getActualFuturesTickers } from './api/moex.js';
 import { generateSignal } from './signals/generator.js';
-import { PatternRegistry } from './patterns/registry.js';
 import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
 import { exportToExcel } from './utils/excel.js';
 
-// Коды активов для автоматического поиска тикеров фьючерсов
 const ASSET_CODES = {
-    'RTS': 'RTS',
-    'Si': 'Si',
-    'BR': 'BR',
-    'GOLD': 'GOLD',
-    'SILV': 'SILV',
-    'PLAT': 'PLT',
-    'PALL': 'PLD',
-    'COPPER': 'COPPER',
-    'ALUM': 'ALUM',
-    'NICK': 'NICKEL',
-    'WHT': 'WHEAT',
-    'CORN': 'CORN',
-    'SOYB': 'SOYB',
-    'SUGR': 'SUGAR',
-    'COFF': 'COFFEE',
-    'CACA': 'COCOA',
-    'COTN': 'COTTON',
-    'OIL': 'WTI',
-    'GAS': 'NG',
-    'MX': 'MIX',
-    'RVI': 'RVI',
-    'ROS': 'ROSN',
-    'GAZ': 'GAZR',
-    'LKOH': 'LKOH',
-    'SBER': 'SBRF',
-    'VTBR': 'VTBR',
-    'TATN': 'TATN',
-    'NVTK': 'NOTK',
-    'PLZL': 'PLZL',
-    'GMKN': 'GMKN'
+    'RTS': 'RTS', 'Si': 'Si', 'BR': 'BR', 'GOLD': 'GOLD',
+    'SILV': 'SILV', 'PLAT': 'PLT', 'PALL': 'PLD', 'COPPER': 'COPPER',
+    'ALUM': 'ALUM', 'NICK': 'NICKEL', 'WHT': 'WHEAT', 'CORN': 'CORN',
+    'SOYB': 'SOYB', 'SUGR': 'SUGAR', 'COFF': 'COFFEE', 'CACA': 'COCOA',
+    'COTN': 'COTTON', 'OIL': 'WTI', 'GAS': 'NG', 'MX': 'MIX',
+    'RVI': 'RVI', 'ROS': 'ROSN', 'GAZ': 'GAZR', 'LKOH': 'LKOH',
+    'SBER': 'SBRF', 'VTBR': 'VTBR', 'TATN': 'TATN', 'NVTK': 'NOTK',
+    'PLZL': 'PLZL', 'GMKN': 'GMKN'
 };
 
-// Кэш для актуальных тикеров фьючерсов
 let tickersCache = null;
 let tickersCacheTime = null;
-const TICKERS_CACHE_TTL = 60 * 60 * 1000; // 1 час
+const TICKERS_CACHE_TTL = 3600000;
 
 async function getTickers() {
     const now = Date.now();
     if (tickersCache && tickersCacheTime && (now - tickersCacheTime < TICKERS_CACHE_TTL)) {
         return tickersCache;
     }
-    
     try {
         addLog('🔄 Получение актуальных тикеров с MOEX...');
         const tickers = await getActualFuturesTickers(ASSET_CODES);
@@ -67,13 +33,11 @@ async function getTickers() {
         addLog(`✅ Получено ${Object.keys(tickers).length} актуальных тикеров`);
         return tickers;
     } catch (error) {
-        console.error('Ошибка получения тикеров:', error);
-        addLog('⚠️ Ошибка получения тикеров, использую статичные', 'error');
+        addLog('⚠️ Ошибка получения тикеров', 'error');
         return null;
     }
 }
 
-// Состояние
 let state = {
     timeframe: '24',
     indicators: [],
@@ -84,42 +48,36 @@ let state = {
     isScanning: false
 };
 
-// Инициализация
 document.addEventListener('DOMContentLoaded', () => {
     renderInstruments();
     renderPatterns();
     setupEventListeners();
 });
 
-// Рендер инструментов
 function renderInstruments() {
     const futuresContainer = document.getElementById('futuresContainer');
-    futuresContainer.innerHTML = Object.entries(FUTURES_LIST).map(([key, name]) => `
-        <label>
-            <input type="checkbox" value="${key}" data-group="futures">
-            ${name}
-        </label>
-    `).join('');
+    if (futuresContainer) {
+        futuresContainer.innerHTML = Object.entries(FUTURES_LIST).map(([key, name]) => `
+            <label><input type="checkbox" value="${key}" data-group="futures"> ${name}</label>
+        `).join('');
+    }
 
     const stocksContainer = document.getElementById('stocksContainer');
-    stocksContainer.innerHTML = Object.entries(STOCKS_LIST).map(([key, name]) => `
-        <label>
-            <input type="checkbox" value="${key}" data-group="stocks">
-            ${name}
-        </label>
-    `).join('');
+    if (stocksContainer) {
+        stocksContainer.innerHTML = Object.entries(STOCKS_LIST).map(([key, name]) => `
+            <label><input type="checkbox" value="${key}" data-group="stocks"> ${name}</label>
+        `).join('');
+    }
 }
 
-// Рендер паттернов
 function renderPatterns() {
     const container = document.getElementById('patternsContainer');
-    container.innerHTML = Object.entries(PATTERNS).map(([key, name]) => `
-        <label>
-            <input type="checkbox" value="${key}">
-            ${name}
-        </label>
-    `).join('');
-    updatePatternsCount();
+    if (container) {
+        container.innerHTML = Object.entries(PATTERNS).map(([key, name]) => `
+            <label><input type="checkbox" value="${key}"> ${name}</label>
+        `).join('');
+        updatePatternsCount();
+    }
 }
 
 function updatePatternsCount() {
@@ -128,53 +86,36 @@ function updatePatternsCount() {
     if (el) el.textContent = `(выбрано: ${checked})`;
 }
 
-// Настройка событий
 function setupEventListeners() {
-    document.getElementById('scanBtn').addEventListener('click', startScan);
-    document.getElementById('exportBtn').addEventListener('click', () => {
-        exportToExcel(state.results);
+    document.getElementById('scanBtn')?.addEventListener('click', startScan);
+    document.getElementById('exportBtn')?.addEventListener('click', () => exportToExcel(state.results));
+
+    document.getElementById('selectAllFutures')?.addEventListener('change', (e) => {
+        document.querySelectorAll('#futuresContainer input').forEach(cb => cb.checked = e.target.checked);
     });
 
-    document.getElementById('selectAllFutures').addEventListener('change', (e) => {
-        document.querySelectorAll('#futuresContainer input').forEach(cb => {
-            cb.checked = e.target.checked;
-        });
+    document.getElementById('selectAllStocks')?.addEventListener('change', (e) => {
+        document.querySelectorAll('#stocksContainer input').forEach(cb => cb.checked = e.target.checked);
     });
 
-    document.getElementById('selectAllStocks').addEventListener('change', (e) => {
-        document.querySelectorAll('#stocksContainer input').forEach(cb => {
-            cb.checked = e.target.checked;
-        });
-    });
-
-    document.getElementById('selectAllPatterns').addEventListener('click', () => {
+    document.getElementById('selectAllPatterns')?.addEventListener('click', () => {
         document.querySelectorAll('#patternsContainer input').forEach(cb => cb.checked = true);
         updatePatternsCount();
     });
 
-    document.getElementById('deselectAllPatterns').addEventListener('click', () => {
+    document.getElementById('deselectAllPatterns')?.addEventListener('click', () => {
         document.querySelectorAll('#patternsContainer input').forEach(cb => cb.checked = false);
         updatePatternsCount();
     });
 
-    document.getElementById('patternsContainer').addEventListener('change', updatePatternsCount);
+    document.getElementById('patternsContainer')?.addEventListener('change', updatePatternsCount);
 }
 
-// Основная функция сканирования
 async function startScan() {
     if (state.isScanning) return;
 
-    // Собираем выбранные инструменты
-    const selectedFutures = [];
-    document.querySelectorAll('#futuresContainer input:checked').forEach(cb => {
-        selectedFutures.push(cb.value);
-    });
-
-    const selectedStocks = [];
-    document.querySelectorAll('#stocksContainer input:checked').forEach(cb => {
-        selectedStocks.push(cb.value);
-    });
-
+    const selectedFutures = [...document.querySelectorAll('#futuresContainer input:checked')].map(cb => cb.value);
+    const selectedStocks = [...document.querySelectorAll('#stocksContainer input:checked')].map(cb => cb.value);
     const allSelected = [...selectedFutures, ...selectedStocks];
 
     if (allSelected.length === 0) {
@@ -182,29 +123,19 @@ async function startScan() {
         return;
     }
 
-    // Собираем индикаторы
-    const selectedIndicators = [];
-    document.querySelectorAll('#indicatorsContainer input:checked').forEach(cb => {
-        selectedIndicators.push(cb.value);
-    });
-
+    const selectedIndicators = [...document.querySelectorAll('#indicatorsContainer input:checked')].map(cb => cb.value);
     if (selectedIndicators.length === 0) {
         addLog('⚠️ Ошибка: не выбран ни один индикатор', 'error');
         return;
     }
 
-    // Собираем паттерны
-    const selectedPatterns = [];
-    document.querySelectorAll('#patternsContainer input:checked').forEach(cb => {
-        selectedPatterns.push(cb.value);
-    });
+    const selectedPatterns = [...document.querySelectorAll('#patternsContainer input:checked')].map(cb => cb.value);
 
-    // Сохраняем состояние
     state.indicators = selectedIndicators;
     state.patterns = selectedPatterns;
     state.futures = selectedFutures;
     state.stocks = selectedStocks;
-    state.timeframe = document.getElementById('timeframe').value;
+    state.timeframe = document.getElementById('timeframe')?.value || '24';
 
     state.isScanning = true;
     document.getElementById('scanBtn').disabled = true;
@@ -213,17 +144,14 @@ async function startScan() {
     addLog('🚀 Запуск сканирования...');
     addLog(`📊 Инструментов: ${allSelected.length}, Индикаторов: ${selectedIndicators.length}, Паттернов: ${selectedPatterns.length}`);
 
-    // Получаем актуальные тикеры для фьючерсов
     let actualTickers = {};
     if (selectedFutures.length > 0) {
         const tickers = await getTickers();
-        if (tickers) {
-            actualTickers = tickers;
-        }
+        if (tickers) actualTickers = tickers;
     }
 
     const results = [];
-    let processed = 0;
+    const interval = { '60':'1h', '24':'1d', '7':'1wk', '31':'1mo' }[state.timeframe] || '1d';
 
     for (const key of allSelected) {
         const isFutures = selectedFutures.includes(key);
@@ -233,15 +161,7 @@ async function startScan() {
         let displayName = key;
 
         if (isFutures) {
-            if (actualTickers && actualTickers[key]) {
-                ticker = actualTickers[key];
-            } else {
-                const assetCode = ASSET_CODES[key];
-                if (assetCode) {
-                    ticker = assetCode;
-                    addLog(`⚠️ Для ${key} не найден актуальный тикер, пробую "${ticker}"`, 'warning');
-                }
-            }
+            ticker = actualTickers[key] || ASSET_CODES[key] || key;
             displayName = FUTURES_LIST[key] || key;
         } else if (isStocks) {
             displayName = STOCKS_LIST[key] || key;
@@ -250,21 +170,12 @@ async function startScan() {
         addLog(`🔍 Анализ ${displayName} (${ticker})...`);
 
         try {
-            const interval = getInterval(state.timeframe);
-            
-            // 🔥 ВЫБИРАЕМ API В ЗАВИСИМОСТИ ОТ ТИПА
-            let candles;
-            if (isStocks) {
-                // Акции — через специальный API
-                candles = await fetchStockCandles(ticker, interval, 150);
-            } else {
-                // Фьючерсы — через стандартный API
-                candles = await fetchCandles(ticker, interval, 150);
-            }
+            let candles = isStocks 
+                ? await fetchStockCandles(ticker, interval, 150)
+                : await fetchCandles(ticker, interval, 150);
 
             if (!candles || candles.length < 30) {
-                addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0} свечей)`, 'warning');
-                processed++;
+                addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0})`, 'warning');
                 continue;
             }
 
@@ -273,33 +184,24 @@ async function startScan() {
                 patterns: selectedPatterns
             });
 
-            const lastPrice = candles[candles.length - 1].close;
-
-            const result = {
+            results.push({
                 ticker: key,
                 name: displayName,
                 type: isFutures ? 'Фьючерс' : 'Акция',
                 timeframe: state.timeframe,
-                price: lastPrice,
+                price: candles[candles.length - 1].close,
                 signal: analysis.signal,
                 description: analysis.description,
                 indicators: analysis.indicators || {},
                 patterns: analysis.patterns || []
-            };
+            });
 
-            results.push(result);
-
-            if (analysis.signal === 'BUY' || analysis.signal === 'SELL') {
-                addLog(`  ✅ ${displayName}: ${analysis.signal} — ${analysis.description}`, 'success');
-            } else {
-                addLog(`  ⏸️ ${displayName}: ${analysis.signal} — ${analysis.description}`, 'warning');
-            }
+            const emoji = analysis.signal === 'BUY' ? '✅' : analysis.signal === 'SELL' ? '✅' : '⏸️';
+            addLog(`  ${emoji} ${displayName}: ${analysis.signal} — ${analysis.description}`, analysis.signal === 'BUY' || analysis.signal === 'SELL' ? 'success' : 'warning');
 
         } catch (error) {
-            addLog(`  ❌ ${displayName}: ошибка — ${error.message}`, 'error');
+            addLog(`  ❌ ${displayName}: ${error.message}`, 'error');
         }
-
-        processed++;
     }
 
     state.results = results;
@@ -315,14 +217,4 @@ async function startScan() {
     }
 
     renderSignals(results);
-}
-
-function getInterval(timeframe) {
-    const map = {
-        '60': '1h',
-        '24': '1d',
-        '7': '1wk',
-        '31': '1mo'
-    };
-    return map[timeframe] || '1d';
 }
