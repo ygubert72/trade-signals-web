@@ -5,14 +5,21 @@ export function renderSignals(results) {
 
     if (!results || results.length === 0) {
         container.innerHTML = `
-            <div class="loading" style="padding:60px 20px; text-align:center; color:#94a3b8;">
+            <div class="loading">
                 📭 Сигналов нет
             </div>
         `;
         return;
     }
 
-    let html = '<div class="signals-grid">';
+    const positiveResults = results.filter(r => r.signal === 'BUY' || r.signal === 'SELL');
+
+    let html = `<div style="margin-bottom:12px;font-size:14px;color:#64748b;">
+        Найдено сигналов: <strong style="color:#0f172a;">${positiveResults.length}</strong> 
+        (BUY/SELL) из ${results.length} инструментов
+    </div>`;
+
+    html += '<div class="signals-grid">';
 
     results.forEach(item => {
         const cls = item.signal.toLowerCase();
@@ -26,16 +33,16 @@ export function renderSignals(results) {
         html += `
             <div class="signal-card ${cls}">
                 <div class="card-header">
-                    <h2>${item.display_name}</h2>
-                    <span class="badge">${timeframeLabel}</span>
+                    <h2>${item.name}</h2>
+                    <span class="badge">${item.type} • ${timeframeLabel}</span>
                 </div>
                 <div class="price">
-                    ${item.current_price.toFixed(2)}
+                    ${item.price.toFixed(2)}
                     <span>₽</span>
                 </div>
                 <div class="signal-row">
                     <span class="signal-badge ${cls}">${emoji} ${item.signal}</span>
-                    <span class="signal-desc">${item.signal_description}</span>
+                    <span class="signal-desc">${item.description}</span>
                 </div>
                 ${renderIndicators(item.indicators)}
                 ${renderPatterns(item.patterns)}
@@ -49,12 +56,14 @@ export function renderSignals(results) {
 
 function renderIndicators(ind) {
     if (!ind) return '';
-    const items = [
-        { label: 'EMA50', value: ind.ema50 },
-        { label: 'EMA100', value: ind.ema100 },
-        { label: 'RSI', value: ind.rsi },
-        { label: 'ADX', value: ind.adx }
-    ];
+    const items = [];
+    if (ind.ema50 !== undefined) items.push({ label: 'EMA50', value: ind.ema50 });
+    if (ind.ema100 !== undefined) items.push({ label: 'EMA100', value: ind.ema100 });
+    if (ind.rsi !== undefined) items.push({ label: 'RSI', value: ind.rsi });
+    if (ind.adx !== undefined) items.push({ label: 'ADX', value: ind.adx });
+
+    if (items.length === 0) return '';
+
     return `
         <div class="indicators-grid">
             ${items.map(({label, value}) => `
