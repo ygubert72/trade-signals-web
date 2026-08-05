@@ -39,6 +39,20 @@
             <button id="refreshBtn">Обновить</button>
         </section>
 
+        <!-- 🔥 Блок выбора паттернов -->
+        <section class="patterns-section">
+            <details open>
+                <summary>🧩 Паттерны <span class="patterns-count">(выбрано: все)</span></summary>
+                <div class="patterns-grid" id="patternsContainer">
+                    <!-- Заполняется из JavaScript -->
+                </div>
+                <div class="patterns-actions">
+                    <button id="selectAllPatterns">Выбрать все</button>
+                    <button id="deselectAllPatterns">Снять все</button>
+                </div>
+            </details>
+        </section>
+
         <!-- Результаты -->
         <div id="results" class="results">
             <div class="loading">Загрузка...</div>
