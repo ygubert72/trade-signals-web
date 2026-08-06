@@ -1,4 +1,4 @@
-import { FUTURES_LIST, STOCKS_LIST, INDICATORS, PATTERNS } from './config.js';
+import { FUTURES_LIST, STOCKS_LIST, INDICATORS, PATTERNS } from './config.js';.
 import { fetchCandles, fetchStockCandles, getActualFuturesTickers } from './api/moex.js';
 import { generateSignal } from './signals/generator.js';
 import { renderSignals } from './ui/render.js';
