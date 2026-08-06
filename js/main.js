@@ -124,12 +124,13 @@ async function startScan() {
     }
 
     const selectedIndicators = [...document.querySelectorAll('#indicatorsContainer input:checked')].map(cb => cb.value);
-    if (selectedIndicators.length === 0) {
-        addLog('⚠️ Ошибка: не выбран ни один индикатор', 'error');
+    const selectedPatterns = [...document.querySelectorAll('#patternsContainer input:checked')].map(cb => cb.value);
+
+    // 🔥 РАЗРЕШАЕМ ЗАПУСК, ЕСЛИ ВЫБРАН ХОТЯ БЫ ОДИН ИНДИКАТОР ИЛИ ХОТЯ БЫ ОДИН ПАТТЕРН
+    if (selectedIndicators.length === 0 && selectedPatterns.length === 0) {
+        addLog('⚠️ Ошибка: выберите хотя бы один индикатор или паттерн', 'error');
         return;
     }
-
-    const selectedPatterns = [...document.querySelectorAll('#patternsContainer input:checked')].map(cb => cb.value);
 
     state.indicators = selectedIndicators;
     state.patterns = selectedPatterns;
