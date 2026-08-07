@@ -30,14 +30,18 @@ export class PatternRegistry {
         for (const patternName of selectedPatterns) {
             const pattern = this.#patterns[patternName];
             if (pattern) {
-                const result = pattern.detect(candles);
-                if (result) {
-                    results.push({
-                        pattern: patternName,
-                        signal: result.signal,
-                        description: result.description,
-                        confidence: result.confidence || 'medium'
-                    });
+                try {
+                    const result = pattern.detect(candles);
+                    if (result) {
+                        results.push({
+                            pattern: patternName,
+                            signal: result.signal,
+                            description: result.description,
+                            confidence: result.confidence || 'medium'
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Ошибка в паттерне ${patternName}:`, error);
                 }
             }
         }
