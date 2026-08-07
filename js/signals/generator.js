@@ -50,56 +50,55 @@ export function generateSignal(candles, options = {}) {
     const lastPrice = closes[closes.length - 1];
     let signal = 'HOLD';
     let description = '';
+    let indicatorDescription = '';
 
     // --- ИНДИКАТОРЫ (если выбраны) ---
     if (indicators.length > 0) {
         if (indicators.includes('adx') && adx !== null && adx < ADX_THRESHOLD) {
-            description = `Нет тренда (ADX=${adx.toFixed(1)})`;
+            indicatorDescription = `Нет тренда (ADX=${adx.toFixed(1)})`;
         } else if (indicators.includes('ema') && indicators.includes('rsi')) {
             if (ema100 !== null && rsi !== null) {
                 if (lastPrice > ema100 && rsi > 40 && rsi < 60) {
                     signal = 'BUY';
-                    description = `Восходящий тренд, RSI=${rsi.toFixed(1)}, ADX=${adx?.toFixed(1) || 'Н/Д'}`;
+                    indicatorDescription = `Восходящий тренд, RSI=${rsi.toFixed(1)}, ADX=${adx?.toFixed(1) || 'Н/Д'}`;
                 } else if (lastPrice < ema100 && rsi > 40 && rsi < 60) {
                     signal = 'SELL';
-                    description = `Нисходящий тренд, RSI=${rsi.toFixed(1)}, ADX=${adx?.toFixed(1) || 'Н/Д'}`;
+                    indicatorDescription = `Нисходящий тренд, RSI=${rsi.toFixed(1)}, ADX=${adx?.toFixed(1) || 'Н/Д'}`;
                 } else if (rsi >= 70) {
-                    description = `Перекупленность (RSI=${rsi.toFixed(1)}), ждём отката`;
+                    indicatorDescription = `Перекупленность (RSI=${rsi.toFixed(1)}), ждём отката`;
                 } else if (rsi <= 30) {
-                    description = `Перепроданность (RSI=${rsi.toFixed(1)}), ждём отката`;
+                    indicatorDescription = `Перепроданность (RSI=${rsi.toFixed(1)}), ждём отката`;
                 } else {
-                    description = `Тренд есть, но RSI=${rsi.toFixed(1)} вне зоны входа`;
+                    indicatorDescription = `Тренд есть, но RSI=${rsi.toFixed(1)} вне зоны входа`;
                 }
             } else {
-                description = 'Недостаточно данных для EMA/RSI';
+                indicatorDescription = 'Недостаточно данных для EMA/RSI';
             }
         } else if (indicators.includes('rsi') && rsi !== null) {
             if (rsi > 70) {
                 signal = 'SELL';
-                description = `Перекупленность (RSI=${rsi.toFixed(1)})`;
+                indicatorDescription = `Перекупленность (RSI=${rsi.toFixed(1)})`;
             } else if (rsi < 30) {
                 signal = 'BUY';
-                description = `Перепроданность (RSI=${rsi.toFixed(1)})`;
+                indicatorDescription = `Перепроданность (RSI=${rsi.toFixed(1)})`;
             } else {
-                description = `RSI=${rsi.toFixed(1)} в нейтральной зоне`;
+                indicatorDescription = `RSI=${rsi.toFixed(1)} в нейтральной зоне`;
             }
         } else if (indicators.includes('ema') && ema100 !== null) {
             if (lastPrice > ema100) {
                 signal = 'BUY';
-                description = `Цена выше EMA100 (${ema100.toFixed(2)})`;
+                indicatorDescription = `Цена выше EMA100 (${ema100.toFixed(2)})`;
             } else {
                 signal = 'SELL';
-                description = `Цена ниже EMA100 (${ema100.toFixed(2)})`;
+                indicatorDescription = `Цена ниже EMA100 (${ema100.toFixed(2)})`;
             }
         } else if (indicators.includes('adx') && adx !== null) {
             if (adx > ADX_THRESHOLD) {
-                description = `Сильный тренд (ADX=${adx.toFixed(1)})`;
+                indicatorDescription = `Сильный тренд (ADX=${adx.toFixed(1)})`;
             } else {
-                description = `Слабый тренд (ADX=${adx.toFixed(1)})`;
+                indicatorDescription = `Слабый тренд (ADX=${adx.toFixed(1)})`;
             }
         }
-    } else {
-        description = 'Индикаторы не выбраны';
     }
 
     // --- ПАТТЕРНЫ (всегда, если выбраны) ---
@@ -113,7 +112,22 @@ export function generateSignal(candles, options = {}) {
             const p = patternResults[0];
             signal = p.signal;
             description = p.description;
+        } else {
+            // 🔥 Паттерны выбраны, но не найдены
+            description = 'Паттерны не найдены';
         }
+    }
+
+    // 🔥 ЕСЛИ ПАТТЕРНЫ ВЫБРАНЫ — НЕ ПИШЕМ ПРО ИНДИКАТОРЫ В ОПИСАНИИ
+    // Если паттерны не выбраны — используем описание от индикаторов
+    if (patterns.length === 0 && indicators.length > 0) {
+        description = indicatorDescription;
+    } else if (patterns.length > 0 && patternResults.length === 0) {
+        // Паттерны выбраны, но не найдены — оставляем description = 'Паттерны не найдены'
+    } else if (patterns.length > 0 && patternResults.length > 0) {
+        // Паттерны найдены — description уже установлен
+    } else if (indicators.length === 0 && patterns.length === 0) {
+        description = 'Выберите индикаторы или паттерны';
     }
 
     return {
