@@ -5,7 +5,7 @@ const MOEX_API = 'https://iss.moex.com/iss/engines/futures/markets/forts/securit
 
 // ============ ФЬЮЧЕРСЫ ============
 
-export async function fetchCandles(symbol, interval, limit = 150) {
+export async function fetchCandles(symbol, interval, limit = 250) {
     const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities/${symbol}/candles.json`;
     const params = new URLSearchParams({
         interval: interval,
@@ -33,7 +33,7 @@ export async function fetchCandles(symbol, interval, limit = 150) {
     }
 }
 
-export async function fetchAllSymbols(symbols, interval, limit = 150) {
+export async function fetchAllSymbols(symbols, interval, limit = 250) {
     const results = {};
     for (const [key, symbol] of Object.entries(symbols)) {
         const candles = await fetchCandles(symbol, interval, limit);
@@ -46,14 +46,15 @@ export async function fetchAllSymbols(symbols, interval, limit = 150) {
 
 // ============ АКЦИИ ============
 
-export async function fetchStockCandles(symbol, interval, limit = 150) {
+export async function fetchStockCandles(symbol, interval, limit = 250) {
     const moexSymbol = symbol.replace('.ME', '');
     
     const intervalMap = { '1h': 60, '1d': 24, '1wk': 7, '1mo': 31 };
     const moexInterval = intervalMap[interval] || 24;
     
-    const limitMap = { '1h': 200, '1d': 150, '1wk': 100, '1mo': 60 };
-    const moexLimit = limitMap[interval] || 150;
+    // Увеличенные лимиты для каждого таймфрейма
+    const limitMap = { '1h': 250, '1d': 250, '1wk': 200, '1mo': 120 };
+    const moexLimit = limitMap[interval] || 250;
     
     try {
         const url = `https://iss.moex.com/iss/engines/stock/markets/shares/boards/tqbr/securities/${moexSymbol}/candles.json`;
