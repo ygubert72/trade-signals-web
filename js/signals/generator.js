@@ -8,6 +8,20 @@ import { resetFractalCache } from '../patterns/fractal_breakout.js';
 
 const ADX_THRESHOLD = 25;
 
+// 🔥 ПРАВИЛЬНЫЙ МАППИНГ КЛЮЧЕЙ В РУССКИЕ НАЗВАНИЯ
+const PATTERN_NAME_MAP = {
+    'pinbar': 'Пин-бары на экстремумах',
+    'golden_cross': 'Золотой крест (50/200)',
+    'ma_200': 'Касание/пробой 200MA',
+    'breakout': 'Пробой локального уровня',
+    'double_top': 'Двойная вершина',
+    'double_bottom': 'Двойное дно',
+    'head_shoulders': 'Голова и плечи',
+    'cup_handle': 'Чашка с ручкой',
+    'fractal': 'Пробой фрактальной линии (19)',
+    'fake_breakout': 'Ложный пробой уровня'
+};
+
 export function generateSignal(candles, options = {}) {
     const { indicators = [], patterns = [] } = options;
 
@@ -43,13 +57,10 @@ export function generateSignal(candles, options = {}) {
     let signal = 'HOLD';
     let description = '';
 
-    // Если выбран хотя бы один индикатор
     if (indicators.length > 0) {
-        // Проверка ADX
         if (indicators.includes('adx') && adx !== null && adx < ADX_THRESHOLD) {
             description = `Нет тренда (ADX=${adx.toFixed(1)})`;
         } 
-        // Проверка EMA и RSI
         else if (indicators.includes('ema') && indicators.includes('rsi')) {
             if (ema100 !== null && rsi !== null) {
                 if (lastPrice > ema100 && rsi > 40 && rsi < 60) {
@@ -69,7 +80,6 @@ export function generateSignal(candles, options = {}) {
                 description = 'Недостаточно данных для EMA/RSI';
             }
         } 
-        // Только RSI
         else if (indicators.includes('rsi') && rsi !== null) {
             if (rsi > 70) {
                 signal = 'SELL';
@@ -81,7 +91,6 @@ export function generateSignal(candles, options = {}) {
                 description = `RSI=${rsi.toFixed(1)} в нейтральной зоне`;
             }
         }
-        // Только EMA
         else if (indicators.includes('ema') && ema100 !== null) {
             if (lastPrice > ema100) {
                 signal = 'BUY';
@@ -91,11 +100,9 @@ export function generateSignal(candles, options = {}) {
                 description = `Цена ниже EMA100 (${ema100.toFixed(2)})`;
             }
         }
-        // Только ADX
         else if (indicators.includes('adx') && adx !== null) {
             if (adx > ADX_THRESHOLD) {
                 description = `Сильный тренд (ADX=${adx.toFixed(1)})`;
-                // Для ADX без направления сигнал не даём
             } else {
                 description = `Слабый тренд (ADX=${adx.toFixed(1)})`;
             }
@@ -104,15 +111,13 @@ export function generateSignal(candles, options = {}) {
         description = 'Не выбран ни один индикатор';
     }
 
-    // Анализ паттернов (если выбраны)
+    // 🔥 АНАЛИЗ ПАТТЕРНОВ (ИСПРАВЛЕНО)
     let patternResults = [];
     if (patterns.length > 0) {
         resetFractalCache();
-        // Используем только выбранные паттерны
-        const selectedPatterns = patterns.map(p => PATTERN_MAP[p] || p);
-        // Временно: передаём только выбранные паттерны
-        // Для этого нужно модифицировать PatternRegistry
-        patternResults = PatternRegistry.analyzeSymbol(candles, selectedPatterns);
+        // Преобразуем ключи в русские названия для регистра
+        const patternNames = patterns.map(p => PATTERN_NAME_MAP[p] || p);
+        patternResults = PatternRegistry.analyzeSymbol(candles, patternNames);
     }
 
     return {
@@ -122,17 +127,3 @@ export function generateSignal(candles, options = {}) {
         patterns: patternResults
     };
 }
-
-// Маппинг коротких имён паттернов
-const PATTERN_MAP = {
-    'pinbar': 'Пин-бары на экстремумах',
-    'golden_cross': 'Золотой крест (50/200)',
-    'ma_200': 'Касание/пробой 200MA',
-    'breakout': 'Пробой локального уровня',
-    'double_top': 'Двойная вершина',
-    'double_bottom': 'Двойное дно',
-    'head_shoulders': 'Голова и плечи',
-    'cup_handle': 'Чашка с ручкой',
-    'fractal': 'Пробой фрактальной линии (19)',
-    'fake_breakout': 'Ложный пробой уровня'
-};
