@@ -5,38 +5,38 @@ import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
 import { exportToExcel } from './utils/excel.js';
 
-// ИСПРАВЛЕННЫЕ КОДЫ ДЛЯ MOEX (правильные ASSETCODE)
+// ========== ТОЛЬКО РЕАЛЬНЫЕ КОДЫ MOEX ==========
 const ASSET_CODES = {
-    'RTS': 'RTS',
-    'Si': 'SIB',        // исправлено: Si → SIB
-    'BR': 'BR',
-    'GOLD': 'GOLD',
-    'SILV': 'SILV',
-    'PLAT': 'PLAT',
-    'PALL': 'PALL',
-    'COPPER': 'COPPER',
-    'ALUM': 'ALUM',
-    'NICK': 'NICK',
-    'WHT': 'WHT',
-    'CORN': 'CORN',
-    'SOYB': 'SOYB',
-    'SUGR': 'SUGR',
-    'COFF': 'COFF',
-    'CACA': 'CACA',
-    'COTN': 'COTN',
-    'OIL': 'OIL',
-    'GAS': 'GAS',
-    'MX': 'MX',
-    'RVI': 'RVI',
-    'ROS': 'ROSN',
-    'GAZ': 'GAZR',
-    'LKOH': 'LKOH',
-    'SBER': 'SBRF',
-    'VTBR': 'VTBR',
-    'TATN': 'TATN',
-    'NVTK': 'NOTK',
-    'PLZL': 'PLZL',
-    'GMKN': 'GMKN'
+    'RTS': 'RTS',      // Индекс РТС
+    'Si': 'SIB',       // Доллар-рубль
+    'BR': 'BR',        // Нефть Brent
+    'GOLD': 'GOLD',    // Золото
+    'SILV': 'SILV',    // Серебро
+    // 'PLAT': 'PLAT',  // ❌ НЕТ НА MOEX
+    // 'PALL': 'PALL',  // ❌ НЕТ НА MOEX
+    'COPPER': 'COPPER', // Медь
+    'ALUM': 'ALUM',     // Алюминий
+    // 'NICK': 'NICK',  // ❌ НЕТ НА MOEX
+    // 'WHT': 'WHT',    // ❌ НЕТ НА MOEX
+    // 'CORN': 'CORN',  // ❌ НЕТ НА MOEX
+    // 'SOYB': 'SOYB',  // ❌ НЕТ НА MOEX
+    'SUGR': 'SUGR',     // Сахар
+    // 'COFF': 'COFF',  // ❌ НЕТ НА MOEX
+    // 'CACA': 'CACA',  // ❌ НЕТ НА MOEX
+    // 'COTN': 'COTN',  // ❌ НЕТ НА MOEX
+    // 'OIL': 'OIL',    // ❌ НЕТ НА MOEX
+    // 'GAS': 'GAS',    // ❌ НЕТ НА MOEX
+    // 'MX': 'MX',      // ❌ НЕТ НА MOEX
+    // 'RVI': 'RVI',    // ❌ НЕТ НА MOEX
+    'ROS': 'ROSN',      // Роснефть
+    'GAZ': 'GAZR',      // Газпром
+    'LKOH': 'LKOH',     // Лукойл
+    'SBER': 'SBRF',     // Сбербанк
+    'VTBR': 'VTBR',     // ВТБ
+    'TATN': 'TATN',     // Татнефть
+    // 'NVTK': 'NVTK',  // ❌ НЕТ НА СРОЧНОМ РЫНКЕ
+    // 'PLZL': 'PLZL',  // ❌ НЕТ НА СРОЧНОМ РЫНКЕ
+    'GMKN': 'GMKN'      // Норникель
 };
 
 let tickersCache = null;
@@ -194,8 +194,8 @@ async function startScan() {
 
         try {
             let candles = isStocks 
-                ? await fetchStockCandles(ticker, interval, 250) // увеличено до 250
-                : await fetchCandles(ticker, interval, 250);    // увеличено до 250
+                ? await fetchStockCandles(ticker, interval, 250)
+                : await fetchCandles(ticker, interval, 250);
 
             if (!candles || candles.length < 30) {
                 addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0})`, 'warning');
