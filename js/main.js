@@ -5,15 +5,38 @@ import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
 import { exportToExcel } from './utils/excel.js';
 
+// ИСПРАВЛЕННЫЕ КОДЫ ДЛЯ MOEX (правильные ASSETCODE)
 const ASSET_CODES = {
-    'RTS': 'RTS', 'Si': 'Si', 'BR': 'BR', 'GOLD': 'GOLD',
-    'SILV': 'SILV', 'PLAT': 'PLT', 'PALL': 'PLD', 'COPPER': 'COPPER',
-    'ALUM': 'ALUM', 'NICK': 'NICKEL', 'WHT': 'WHEAT', 'CORN': 'CORN',
-    'SOYB': 'SOYB', 'SUGR': 'SUGAR', 'COFF': 'COFFEE', 'CACA': 'COCOA',
-    'COTN': 'COTTON', 'OIL': 'WTI', 'GAS': 'NG', 'MX': 'MIX',
-    'RVI': 'RVI', 'ROS': 'ROSN', 'GAZ': 'GAZR', 'LKOH': 'LKOH',
-    'SBER': 'SBRF', 'VTBR': 'VTBR', 'TATN': 'TATN', 'NVTK': 'NOTK',
-    'PLZL': 'PLZL', 'GMKN': 'GMKN'
+    'RTS': 'RTS',
+    'Si': 'SIB',        // исправлено: Si → SIB
+    'BR': 'BR',
+    'GOLD': 'GOLD',
+    'SILV': 'SILV',
+    'PLAT': 'PLAT',
+    'PALL': 'PALL',
+    'COPPER': 'COPPER',
+    'ALUM': 'ALUM',
+    'NICK': 'NICK',
+    'WHT': 'WHT',
+    'CORN': 'CORN',
+    'SOYB': 'SOYB',
+    'SUGR': 'SUGR',
+    'COFF': 'COFF',
+    'CACA': 'CACA',
+    'COTN': 'COTN',
+    'OIL': 'OIL',
+    'GAS': 'GAS',
+    'MX': 'MX',
+    'RVI': 'RVI',
+    'ROS': 'ROSN',
+    'GAZ': 'GAZR',
+    'LKOH': 'LKOH',
+    'SBER': 'SBRF',
+    'VTBR': 'VTBR',
+    'TATN': 'TATN',
+    'NVTK': 'NOTK',
+    'PLZL': 'PLZL',
+    'GMKN': 'GMKN'
 };
 
 let tickersCache = null;
@@ -126,7 +149,6 @@ async function startScan() {
     const selectedIndicators = [...document.querySelectorAll('#indicatorsContainer input:checked')].map(cb => cb.value);
     const selectedPatterns = [...document.querySelectorAll('#patternsContainer input:checked')].map(cb => cb.value);
 
-    // 🔥 РАЗРЕШАЕМ ЗАПУСК, ЕСЛИ ВЫБРАН ХОТЯ БЫ ОДИН ИНДИКАТОР ИЛИ ХОТЯ БЫ ОДИН ПАТТЕРН
     if (selectedIndicators.length === 0 && selectedPatterns.length === 0) {
         addLog('⚠️ Ошибка: выберите хотя бы один индикатор или паттерн', 'error');
         return;
@@ -172,8 +194,8 @@ async function startScan() {
 
         try {
             let candles = isStocks 
-                ? await fetchStockCandles(ticker, interval, 150)
-                : await fetchCandles(ticker, interval, 150);
+                ? await fetchStockCandles(ticker, interval, 250) // увеличено до 250
+                : await fetchCandles(ticker, interval, 250);    // увеличено до 250
 
             if (!candles || candles.length < 30) {
                 addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0})`, 'warning');
