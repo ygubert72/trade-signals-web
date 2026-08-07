@@ -8,7 +8,7 @@ import { exportToExcel } from './utils/excel.js';
 // ========== ТОЛЬКО РЕАЛЬНЫЕ КОДЫ MOEX ==========
 const ASSET_CODES = {
     'RTS': 'RTS',      // Индекс РТС
-    'Si': 'SIB',       // Доллар-рубль
+    'Si': 'Si',       // Доллар-рубль
     'BR': 'BR',        // Нефть Brent
     'GOLD': 'GOLD',    // Золото
     'SILV': 'SILV',    // Серебро
