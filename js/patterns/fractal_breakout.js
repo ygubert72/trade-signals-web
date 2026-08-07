@@ -1,14 +1,13 @@
 // js/patterns/fractal_breakout.js
 
-let fractalCache = new Set();
-
-export function resetFractalCache() {
-    fractalCache = new Set();
-}
-
+// Убираем глобальный кеш — теперь он будет храниться в экземпляре класса
 export class FractalBreakoutPattern {
     name = 'Пробой фрактальной линии (19)';
     confidence = 'medium';
+    
+    constructor() {
+        this.cache = new Set();
+    }
 
     findFractals(candles, left = 9, right = 9) {
         const highs = candles.map(c => c.high);
@@ -60,10 +59,11 @@ export class FractalBreakoutPattern {
                 const currLine = p1.price + slope * (lastIdx - p1.index);
 
                 const key = `BUY_${p1.index}_${p2.index}`;
-                if (!fractalCache.has(key)) {
+                // Используем кеш экземпляра
+                if (!this.cache.has(key)) {
                     const prevClose = candles[lastIdx - 1].close;
                     if (prevClose <= prevLine && lastClose > currLine) {
-                        fractalCache.add(key);
+                        this.cache.add(key);
                         return {
                             signal: 'BUY',
                             description: 'BUY при пробое трендовой линии по фракталам (19)',
@@ -88,10 +88,10 @@ export class FractalBreakoutPattern {
                 const currLine = p1.price + slope * (lastIdx - p1.index);
 
                 const key = `SELL_${p1.index}_${p2.index}`;
-                if (!fractalCache.has(key)) {
+                if (!this.cache.has(key)) {
                     const prevClose = candles[lastIdx - 1].close;
                     if (prevClose >= prevLine && lastClose < currLine) {
-                        fractalCache.add(key);
+                        this.cache.add(key);
                         return {
                             signal: 'SELL',
                             description: 'SELL при пробое трендовой линии по фракталам (19)',
