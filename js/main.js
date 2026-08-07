@@ -5,7 +5,7 @@ import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
 import { exportToExcel } from './utils/excel.js';
 
-// ========== ИСПРАВЛЕННЫЕ КОДЫ ==========
+// ========== ПРАВИЛЬНЫЕ ASSETCODE ДЛЯ MOEX ==========
 const ASSET_CODES = {
     'RTS': 'RTS',
     'Si': 'Si',        // ← исправлено!
