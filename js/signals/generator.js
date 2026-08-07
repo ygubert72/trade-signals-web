@@ -2,7 +2,7 @@ import { calculateEMA } from '../indicators/ema.js';
 import { calculateRSI } from '../indicators/rsi.js';
 import { calculateADX } from '../indicators/adx.js';
 import { PatternRegistry } from '../patterns/registry.js';
-import { resetFractalCache } from '../patterns/fractal_breakout.js';
+// ❌ УДАЛЕНА СТРОКА: import { resetFractalCache } from '../patterns/fractal_breakout.js';
 
 const ADX_THRESHOLD = 25;
 
@@ -111,7 +111,7 @@ export function generateSignal(candles, options = {}) {
     // --- 2. Паттерны ---
     let patternResults = [];
     if (patterns.length > 0) {
-        resetFractalCache();
+        // ❌ УДАЛЕН ВЫЗОВ: resetFractalCache();
         const patternNames = patterns.map(p => PATTERN_NAME_MAP[p] || p);
         patternResults = PatternRegistry.analyzeSymbol(candles, patternNames);
         
