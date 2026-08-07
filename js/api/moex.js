@@ -1,6 +1,7 @@
 // js/api/moex.js
 
 // ============ ФЬЮЧЕРСЫ ============
+
 export async function fetchCandles(symbol, interval, limit = 250) {
     const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities/${symbol}/candles.json`;
     const params = new URLSearchParams({
@@ -29,7 +30,19 @@ export async function fetchCandles(symbol, interval, limit = 250) {
     }
 }
 
+export async function fetchAllSymbols(symbols, interval, limit = 250) {
+    const results = {};
+    for (const [key, symbol] of Object.entries(symbols)) {
+        const candles = await fetchCandles(symbol, interval, limit);
+        if (candles.length) {
+            results[key] = candles;
+        }
+    }
+    return results;
+}
+
 // ============ АКЦИИ ============
+
 export async function fetchStockCandles(symbol, interval, limit = 250) {
     const moexSymbol = symbol.replace('.ME', '');
     
@@ -62,53 +75,14 @@ export async function fetchStockCandles(symbol, interval, limit = 250) {
     }
 }
 
-// ============ АВТОПОИСК ТИКЕРОВ ============
+// ============ АВТОПОИСК ТИКЕРОВ (ИСПРАВЛЕН) ============
 
-// Функция для поиска конкретного тикера
-export async function getActualFuturesTicker(assetCode) {
-    try {
-        const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities.json?limit=100`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        const securities = data?.securities?.data || [];
-        const columns = data?.securities?.columns || [];
-        
-        const secidIdx = columns.indexOf('SECID');
-        const assetCodeIdx = columns.indexOf('ASSETCODE');
-        const lastTradeDateIdx = columns.indexOf('LASTTRADEDATE');
-        const boardIdx = columns.indexOf('BOARDID');
-        
-        const contracts = securities
-            .filter(row => {
-                const board = row[boardIdx] || '';
-                return board.includes('FUT');
-            })
-            .filter(row => row[assetCodeIdx] === assetCode)
-            .map(row => ({
-                secid: row[secidIdx],
-                lastTradeDate: row[lastTradeDateIdx]
-            }))
-            .filter(c => c.lastTradeDate && c.secid);
-        
-        if (contracts.length === 0) return null;
-        
-        contracts.sort((a, b) => new Date(b.lastTradeDate) - new Date(a.lastTradeDate));
-        return contracts[0].secid;
-        
-    } catch (error) {
-        console.error(`Ошибка получения тикера для ${assetCode}:`, error);
-        return null;
-    }
-}
-
-// Улучшенная версия с оптимизацией (один запрос)
 export async function getActualFuturesTickers(symbols) {
     console.log('🔄 Запрос актуальных тикеров с MOEX...');
     const result = {};
     
     try {
-        // Получаем все фьючерсы за один запрос
+        // Получаем все фьючерсы
         const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities.json?limit=200`;
         const response = await fetch(url);
         const data = await response.json();
@@ -119,94 +93,38 @@ export async function getActualFuturesTickers(symbols) {
         const secidIdx = columns.indexOf('SECID');
         const assetCodeIdx = columns.indexOf('ASSETCODE');
         const lastTradeDateIdx = columns.indexOf('LASTTRADEDATE');
-        const boardIdx = columns.indexOf('BOARDID');
-        const shortNameIdx = columns.indexOf('SHORTNAME');
         
-        // Группируем контракты по базовому активу
-        const contractsByAsset = {};
-        
-        for (const row of securities) {
-            const board = row[boardIdx] || '';
-            if (!board.includes('FUT')) continue;
-            
-            const assetCode = row[assetCodeIdx] || '';
-            const secid = row[secidIdx];
-            const lastTradeDate = row[lastTradeDateIdx];
-            const shortName = row[shortNameIdx] || '';
-            
-            if (!assetCode || !secid || !lastTradeDate) continue;
-            
-            if (!contractsByAsset[assetCode]) {
-                contractsByAsset[assetCode] = [];
-            }
-            contractsByAsset[assetCode].push({ 
-                secid, 
-                lastTradeDate,
-                shortName,
-                assetCode
-            });
-        }
-        
-        console.log(`📊 Найдено ${Object.keys(contractsByAsset).length} базовых активов`);
-        
-        // Для каждого символа ищем подходящий контракт
+        // Для каждого символа ищем контракт
         for (const [key, code] of Object.entries(symbols)) {
-            let bestTicker = null;
-            let bestDate = null;
+            // Находим все контракты с этим ASSETCODE
+            const contracts = securities
+                .filter(row => row[assetCodeIdx] === code)
+                .map(row => ({
+                    secid: row[secidIdx],
+                    lastTradeDate: row[lastTradeDateIdx]
+                }))
+                .filter(c => c.secid && c.lastTradeDate);
             
-            // 1. Точное совпадение по ASSETCODE
-            if (contractsByAsset[code]) {
-                const contracts = contractsByAsset[code];
-                contracts.sort((a, b) => new Date(b.lastTradeDate) - new Date(a.lastTradeDate));
-                bestTicker = contracts[0].secid;
-                bestDate = contracts[0].lastTradeDate;
-            } 
-            // 2. Поиск по SHORTNAME (частичное совпадение)
-            else {
-                for (const [assetCode, contracts] of Object.entries(contractsByAsset)) {
-                    // Проверяем частичное совпадение
-                    const match = contracts.some(c => 
-                        c.shortName.includes(code) || 
-                        code.includes(c.shortName) ||
-                        c.assetCode.includes(code)
-                    );
-                    
-                    if (match) {
-                        contracts.sort((a, b) => new Date(b.lastTradeDate) - new Date(a.lastTradeDate));
-                        bestTicker = contracts[0].secid;
-                        bestDate = contracts[0].lastTradeDate;
-                        break;
-                    }
-                }
+            if (contracts.length === 0) {
+                console.log(`⚠️ ${key} (${code}) → контракты не найдены`);
+                // ❌ НЕ ВОЗВРАЩАЕМ code! Пропускаем инструмент
+                continue;
             }
             
-            if (bestTicker) {
-                result[key] = bestTicker;
-                console.log(`✅ ${key} (${code}) → ${bestTicker} (${bestDate})`);
-            } else {
-                console.log(`⚠️ ${key} (${code}) → не найден, используем код как есть`);
-                // Если не нашли — используем сам код как тикер
-                result[key] = code;
-            }
+            // Сортируем по дате экспирации (самые поздние первые)
+            contracts.sort((a, b) => new Date(b.lastTradeDate) - new Date(a.lastTradeDate));
+            
+            // Берем самый поздний контракт
+            const best = contracts[0];
+            result[key] = best.secid;
+            console.log(`✅ ${key} (${code}) → ${best.secid} (${best.lastTradeDate})`);
         }
         
+        console.log(`📊 Найдено актуальных тикеров: ${Object.keys(result).length}`);
         return result;
         
     } catch (error) {
         console.error('Ошибка получения тикеров:', error);
-        // В случае ошибки возвращаем исходные коды
-        return symbols;
+        return {};
     }
-}
-
-// ============ ДЛЯ СОВМЕСТИМОСТИ ============
-export async function fetchAllSymbols(symbols, interval, limit = 250) {
-    const results = {};
-    for (const [key, symbol] of Object.entries(symbols)) {
-        const candles = await fetchCandles(symbol, interval, limit);
-        if (candles.length) {
-            results[key] = candles;
-        }
-    }
-    return results;
 }
