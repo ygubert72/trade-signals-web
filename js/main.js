@@ -5,38 +5,23 @@ import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
 import { exportToExcel } from './utils/excel.js';
 
-// ========== ТОЛЬКО РЕАЛЬНЫЕ КОДЫ MOEX ==========
+// ========== ИСПРАВЛЕННЫЕ КОДЫ ==========
 const ASSET_CODES = {
-    'RTS': 'RTS',      // Индекс РТС
-    'Si': 'Si',       // Доллар-рубль
-    'BR': 'BR',        // Нефть Brent
-    'GOLD': 'GOLD',    // Золото
-    'SILV': 'SILV',    // Серебро
-    // 'PLAT': 'PLAT',  // ❌ НЕТ НА MOEX
-    // 'PALL': 'PALL',  // ❌ НЕТ НА MOEX
-    'COPPER': 'COPPER', // Медь
-    'ALUM': 'ALUM',     // Алюминий
-    // 'NICK': 'NICK',  // ❌ НЕТ НА MOEX
-    // 'WHT': 'WHT',    // ❌ НЕТ НА MOEX
-    // 'CORN': 'CORN',  // ❌ НЕТ НА MOEX
-    // 'SOYB': 'SOYB',  // ❌ НЕТ НА MOEX
-    'SUGR': 'SUGR',     // Сахар
-    // 'COFF': 'COFF',  // ❌ НЕТ НА MOEX
-    // 'CACA': 'CACA',  // ❌ НЕТ НА MOEX
-    // 'COTN': 'COTN',  // ❌ НЕТ НА MOEX
-    // 'OIL': 'OIL',    // ❌ НЕТ НА MOEX
-    // 'GAS': 'GAS',    // ❌ НЕТ НА MOEX
-    // 'MX': 'MX',      // ❌ НЕТ НА MOEX
-    // 'RVI': 'RVI',    // ❌ НЕТ НА MOEX
-    'ROS': 'ROSN',      // Роснефть
-    'GAZ': 'GAZR',      // Газпром
-    'LKOH': 'LKOH',     // Лукойл
-    'SBER': 'SBRF',     // Сбербанк
-    'VTBR': 'VTBR',     // ВТБ
-    'TATN': 'TATN',     // Татнефть
-    // 'NVTK': 'NVTK',  // ❌ НЕТ НА СРОЧНОМ РЫНКЕ
-    // 'PLZL': 'PLZL',  // ❌ НЕТ НА СРОЧНОМ РЫНКЕ
-    'GMKN': 'GMKN'      // Норникель
+    'RTS': 'RTS',
+    'Si': 'Si',        // ← исправлено!
+    'BR': 'BR',
+    'GOLD': 'GOLD',
+    'SILV': 'SILV',
+    'COPPER': 'COPPER',
+    'ALUM': 'ALUM',
+    'SUGR': 'SUGR',
+    'ROS': 'ROSN',
+    'GAZ': 'GAZR',
+    'LKOH': 'LKOH',
+    'SBER': 'SBRF',
+    'VTBR': 'VTBR',
+    'TATN': 'TATN',
+    'GMKN': 'GMKN'
 };
 
 let tickersCache = null;
