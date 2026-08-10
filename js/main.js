@@ -1,24 +1,14 @@
-import { FUTURES_LIST, STOCKS_LIST, INDICATORS, PATTERNS } from './config.js';
+import { FUTURES_LIST, STOCKS_LIST, INDICATORS, PATTERNS, ASSET_CODES, FALLBACK_TICKERS } from './config.js';
 import { fetchCandles, fetchStockCandles, getActualFuturesTickers } from './api/moex.js';
 import { generateSignal } from './signals/generator.js';
 import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
 import { exportToExcel } from './utils/excel.js';
 
-const ASSET_CODES = {
-    'RTS': 'RTS', 'Si': 'Si', 'BR': 'BR', 'GOLD': 'GOLD',
-    'SILV': 'SILV', 'PLAT': 'PLT', 'PALL': 'PLD', 'COPPER': 'COPPER',
-    'ALUM': 'ALUM', 'NICK': 'NICKEL', 'WHT': 'WHEAT', 'CORN': 'CORN',
-    'SOYB': 'SOYB', 'SUGR': 'SUGAR', 'COFF': 'COFFEE', 'CACA': 'COCOA',
-    'COTN': 'COTTON', 'OIL': 'WTI', 'GAS': 'NG', 'MX': 'MIX',
-    'RVI': 'RVI', 'ROS': 'ROSN', 'GAZ': 'GAZR', 'LKOH': 'LKOH',
-    'SBER': 'SBRF', 'VTBR': 'VTBR', 'TATN': 'TATN', 'NVTK': 'NOTK',
-    'PLZL': 'PLZL', 'GMKN': 'GMKN'
-};
-
+// Кэш для тикеров
 let tickersCache = null;
 let tickersCacheTime = null;
-const TICKERS_CACHE_TTL = 3600000;
+const TICKERS_CACHE_TTL = 3600000; // 1 час
 
 async function getTickers() {
     const now = Date.now();
@@ -28,13 +18,29 @@ async function getTickers() {
     try {
         addLog('🔄 Получение актуальных тикеров с MOEX...');
         const tickers = await getActualFuturesTickers(ASSET_CODES);
-        tickersCache = tickers;
+        
+        // Если автопоиск вернул пустой результат, используем запасные
+        if (!tickers || Object.keys(tickers).length === 0) {
+            addLog('⚠️ Автопоиск не сработал, использую запасные тикеры', 'warning');
+            tickersCache = FALLBACK_TICKERS;
+        } else {
+            tickersCache = tickers;
+            // Дополняем недостающие тикеры из запасных
+            for (const [key, value] of Object.entries(FALLBACK_TICKERS)) {
+                if (!tickersCache[key]) {
+                    tickersCache[key] = value;
+                }
+            }
+        }
+        
         tickersCacheTime = now;
-        addLog(`✅ Получено ${Object.keys(tickers).length} актуальных тикеров`);
-        return tickers;
+        addLog(`✅ Получено ${Object.keys(tickersCache).length} тикеров`);
+        return tickersCache;
     } catch (error) {
-        addLog('⚠️ Ошибка получения тикеров', 'error');
-        return null;
+        addLog(`⚠️ Ошибка получения тикеров, использую запасные: ${error.message}`, 'warning');
+        tickersCache = FALLBACK_TICKERS;
+        tickersCacheTime = now;
+        return tickersCache;
     }
 }
 
@@ -81,9 +87,18 @@ function renderPatterns() {
 }
 
 function updatePatternsCount() {
-    const checked = document.querySelectorAll('#patternsContainer input:checked').length;
+    const container = document.getElementById('patternsContainer');
+    if (!container) return;
+    const checked = container.querySelectorAll('input:checked').length;
+    const total = container.querySelectorAll('input').length;
     const el = document.querySelector('.patterns-count');
-    if (el) el.textContent = `(выбрано: ${checked})`;
+    if (el) {
+        if (checked === total && total > 0) {
+            el.textContent = '(выбрано: все)';
+        } else {
+            el.textContent = `(выбрано: ${checked}/${total})`;
+        }
+    }
 }
 
 function setupEventListeners() {
@@ -138,22 +153,25 @@ async function startScan() {
     state.timeframe = document.getElementById('timeframe')?.value || '24';
 
     state.isScanning = true;
-    document.getElementById('scanBtn').disabled = true;
+    const scanBtn = document.getElementById('scanBtn');
+    scanBtn.disabled = true;
+    scanBtn.textContent = '⏳ Сканирование...';
     document.getElementById('exportBtn').disabled = true;
+    
     clearLog();
     addLog('🚀 Запуск сканирования...');
     addLog(`📊 Инструментов: ${allSelected.length}, Индикаторов: ${selectedIndicators.length}, Паттернов: ${selectedPatterns.length}`);
 
     let actualTickers = {};
     if (selectedFutures.length > 0) {
-        const tickers = await getTickers();
-        if (tickers) actualTickers = tickers;
+        actualTickers = await getTickers() || {};
     }
 
+    const interval = { '60': '1h', '24': '1d', '7': '1wk', '31': '1mo' }[state.timeframe] || '1d';
     const results = [];
-    const interval = { '60':'1h', '24':'1d', '7':'1wk', '31':'1mo' }[state.timeframe] || '1d';
 
-    for (const key of allSelected) {
+    // Параллельная загрузка
+    const instrumentPromises = allSelected.map(async (key) => {
         const isFutures = selectedFutures.includes(key);
         const isStocks = selectedStocks.includes(key);
         
@@ -161,7 +179,7 @@ async function startScan() {
         let displayName = key;
 
         if (isFutures) {
-            ticker = actualTickers[key] || ASSET_CODES[key] || key;
+            ticker = actualTickers[key] || FALLBACK_TICKERS[key] || key;
             displayName = FUTURES_LIST[key] || key;
         } else if (isStocks) {
             displayName = STOCKS_LIST[key] || key;
@@ -176,17 +194,16 @@ async function startScan() {
 
             if (!candles || candles.length < 30) {
                 addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0})`, 'warning');
-                continue;
+                return null;
             }
 
-            // ✅ ИСПРАВЛЕНО: добавлен timeframe
             const analysis = generateSignal(candles, {
                 indicators: selectedIndicators,
                 patterns: selectedPatterns,
                 timeframe: state.timeframe
             });
 
-            results.push({
+            const result = {
                 ticker: key,
                 name: displayName,
                 type: isFutures ? 'Фьючерс' : 'Акция',
@@ -196,19 +213,33 @@ async function startScan() {
                 description: analysis.description,
                 indicators: analysis.indicators || {},
                 patterns: analysis.patterns || []
-            });
+            };
 
             const emoji = analysis.signal === 'BUY' ? '✅' : analysis.signal === 'SELL' ? '✅' : '⏸️';
-            addLog(`  ${emoji} ${displayName}: ${analysis.signal} — ${analysis.description}`, analysis.signal === 'BUY' || analysis.signal === 'SELL' ? 'success' : 'warning');
+            addLog(`  ${emoji} ${displayName}: ${analysis.signal} — ${analysis.description}`, 
+                   analysis.signal === 'BUY' || analysis.signal === 'SELL' ? 'success' : 'warning');
+
+            return result;
 
         } catch (error) {
             addLog(`  ❌ ${displayName}: ${error.message}`, 'error');
+            return null;
         }
-    }
+    });
+
+    const instrumentResults = await Promise.allSettled(instrumentPromises);
+    
+    instrumentResults.forEach(result => {
+        if (result.status === 'fulfilled' && result.value) {
+            results.push(result.value);
+        }
+    });
 
     state.results = results;
     state.isScanning = false;
-    document.getElementById('scanBtn').disabled = false;
+    
+    scanBtn.disabled = false;
+    scanBtn.textContent = '🚀 Запустить анализ';
 
     const positiveResults = results.filter(r => r.signal === 'BUY' || r.signal === 'SELL');
     if (positiveResults.length > 0) {
