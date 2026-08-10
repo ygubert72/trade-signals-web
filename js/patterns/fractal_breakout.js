@@ -3,22 +3,11 @@
 // Кэш с временем жизни (вместо простого Set)
 const signalCache = new Map();
 const CACHE_TTL = {
-    '1h': 4 * 60 * 60 * 1000,    // 4 часа для 1-часового таймфрейма
+    '1h': 4 * 60 * 60 * 1000,    // 4 часа для 1-часового
     '1d': 3 * 24 * 60 * 60 * 1000, // 3 дня для дневного
     '1wk': 14 * 24 * 60 * 60 * 1000, // 2 недели для недельного
     '1mo': 30 * 24 * 60 * 60 * 1000  // 30 дней для месячного
 };
-
-// Глобальная переменная для хранения текущего таймфрейма
-let currentTimeframe = '1d';
-
-export function setFractalTimeframe(timeframe) {
-    currentTimeframe = timeframe;
-}
-
-export function clearFractalCache() {
-    signalCache.clear();
-}
 
 // Очистка устаревших записей
 function cleanExpiredCache() {
@@ -30,7 +19,11 @@ function cleanExpiredCache() {
     }
 }
 
-class FractalBreakoutPattern {
+export function clearFractalCache() {
+    signalCache.clear();
+}
+
+export class FractalBreakoutPattern {
     name = 'Пробой фрактальной линии (19)';
     confidence = 'medium';
 
@@ -41,7 +34,6 @@ class FractalBreakoutPattern {
         const lowerFractals = [];
 
         for (let i = left; i < candles.length - right; i++) {
-            // Верхний фрактал
             let isUpper = true;
             for (let j = 1; j <= left; j++) {
                 if (highs[i] <= highs[i - j]) { isUpper = false; break; }
@@ -49,11 +41,8 @@ class FractalBreakoutPattern {
             for (let j = 1; j <= right; j++) {
                 if (highs[i] <= highs[i + j]) { isUpper = false; break; }
             }
-            if (isUpper) {
-                upperFractals.push({ index: i, price: highs[i] });
-            }
+            if (isUpper) upperFractals.push({ index: i, price: highs[i] });
 
-            // Нижний фрактал
             let isLower = true;
             for (let j = 1; j <= left; j++) {
                 if (lows[i] >= lows[i - j]) { isLower = false; break; }
@@ -61,9 +50,7 @@ class FractalBreakoutPattern {
             for (let j = 1; j <= right; j++) {
                 if (lows[i] >= lows[i + j]) { isLower = false; break; }
             }
-            if (isLower) {
-                lowerFractals.push({ index: i, price: lows[i] });
-            }
+            if (isLower) lowerFractals.push({ index: i, price: lows[i] });
         }
 
         return { upperFractals, lowerFractals };
@@ -71,9 +58,6 @@ class FractalBreakoutPattern {
 
     detect(candles, timeframe = '1d') {
         if (candles.length < 40) return null;
-
-        // Устанавливаем текущий таймфрейм для кэша
-        setFractalTimeframe(timeframe);
 
         // Очищаем устаревшие записи
         cleanExpiredCache();
@@ -172,9 +156,3 @@ class FractalBreakoutPattern {
         return null;
     }
 }
-
-// Создаем и экспортируем экземпляр паттерна
-export const fractalBreakoutPattern = new FractalBreakoutPattern();
-
-// Для обратной совместимости с PatternRegistry
-export class FractalBreakoutPatternClass extends FractalBreakoutPattern {}
