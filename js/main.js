@@ -1,4 +1,4 @@
-import { FUTURES_LIST, STOCKS_LIST, INDICATORS, PATTERNS, ASSET_CODES } from './config.js';
+import { FUTURES_LIST, STOCKS_LIST, INDICATORS, PATTERNS, ASSET_CODES, FALLBACK_TICKERS } from './config.js';
 import { fetchCandles, fetchStockCandles, getActualFuturesTickers } from './api/moex.js';
 import { generateSignal } from './signals/generator.js';
 import { renderSignals } from './ui/render.js';
@@ -18,18 +18,29 @@ async function getTickers() {
     try {
         addLog('🔄 Получение актуальных тикеров с MOEX...');
         const tickers = await getActualFuturesTickers(ASSET_CODES);
-        if (tickers && Object.keys(tickers).length > 0) {
-            tickersCache = tickers;
-            tickersCacheTime = now;
-            addLog(`✅ Получено ${Object.keys(tickers).length} актуальных тикеров`);
-            return tickers;
+        
+        // Если автопоиск вернул пустой результат, используем запасные тикеры
+        if (!tickers || Object.keys(tickers).length === 0) {
+            addLog('⚠️ Автопоиск не сработал, использую запасные тикеры', 'warning');
+            tickersCache = FALLBACK_TICKERS;
         } else {
-            addLog('⚠️ Не удалось получить тикеры, использую запасные', 'warning');
-            return null;
+            tickersCache = tickers;
+            // Дополняем недостающие тикеры из запасных
+            for (const [key, value] of Object.entries(FALLBACK_TICKERS)) {
+                if (!tickersCache[key]) {
+                    tickersCache[key] = value;
+                }
+            }
         }
+        
+        tickersCacheTime = now;
+        addLog(`✅ Получено ${Object.keys(tickersCache).length} тикеров`);
+        return tickersCache;
     } catch (error) {
-        addLog('⚠️ Ошибка получения тикеров: ' + error.message, 'error');
-        return null;
+        addLog(`⚠️ Ошибка получения тикеров, использую запасные: ${error.message}`, 'warning');
+        tickersCache = FALLBACK_TICKERS;
+        tickersCacheTime = now;
+        return tickersCache;
     }
 }
 
@@ -154,8 +165,7 @@ async function startScan() {
     // Получаем тикеры для фьючерсов
     let actualTickers = {};
     if (selectedFutures.length > 0) {
-        const tickers = await getTickers();
-        if (tickers) actualTickers = tickers;
+        actualTickers = await getTickers() || {};
     }
 
     const interval = { '60': '1h', '24': '1d', '7': '1wk', '31': '1mo' }[state.timeframe] || '1d';
@@ -170,7 +180,8 @@ async function startScan() {
         let displayName = key;
 
         if (isFutures) {
-            ticker = actualTickers[key] || key;
+            // Сначала пробуем получить тикер из actualTickers, потом из FALLBACK
+            ticker = actualTickers[key] || FALLBACK_TICKERS[key] || key;
             displayName = FUTURES_LIST[key] || key;
         } else if (isStocks) {
             displayName = STOCKS_LIST[key] || key;
