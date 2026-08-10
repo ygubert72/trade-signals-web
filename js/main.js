@@ -3,7 +3,7 @@ import { fetchCandles, fetchStockCandles, getActualFuturesTickers } from './api/
 import { generateSignal } from './signals/generator.js';
 import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
-import { exportToExcel } from './utils/excel.js';
+import { exportToExcel } from './utils/excel.js';.
 
 // Кэш для тикеров
 let tickersCache = null;
