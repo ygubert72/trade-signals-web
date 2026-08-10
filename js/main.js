@@ -190,9 +190,9 @@ async function startScan() {
         try {
             let candles = isStocks 
                 ? await fetchStockCandles(ticker, interval, 150)
-                : await fetchCandles(ticker, interval, 150);
+                : await fetchCandles(ticker, interval, 300);
 
-            if (!candles || candles.length < 20) {
+            if (!candles || candles.length < 30) {
                 addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0})`, 'warning');
                 return null;
             }
