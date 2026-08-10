@@ -24,24 +24,27 @@ export class PatternRegistry {
         return Object.keys(this.#patterns);
     }
 
-    static analyzeSymbol(candles, selectedPatterns) {
+    static analyzeSymbol(candles, selectedPatterns, timeframe = '1d') {
         const results = [];
 
         for (const patternName of selectedPatterns) {
             const pattern = this.#patterns[patternName];
             if (pattern) {
-                try {
-                    const result = pattern.detect(candles);
-                    if (result) {
-                        results.push({
-                            pattern: patternName,
-                            signal: result.signal,
-                            description: result.description,
-                            confidence: result.confidence || 'medium'
-                        });
-                    }
-                } catch (error) {
-                    console.error(`Ошибка в паттерне ${patternName}:`, error);
+                // Передаем таймфрейм для паттернов, которые его используют
+                let result;
+                if (pattern.name === 'Пробой фрактальной линии (19)') {
+                    result = pattern.detect(candles, timeframe);
+                } else {
+                    result = pattern.detect(candles);
+                }
+                
+                if (result) {
+                    results.push({
+                        pattern: patternName,
+                        signal: result.signal,
+                        description: result.description,
+                        confidence: result.confidence || 'medium'
+                    });
                 }
             }
         }
