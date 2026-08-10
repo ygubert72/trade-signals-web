@@ -8,7 +8,6 @@ const MOEX_API = 'https://iss.moex.com/iss/engines/futures/markets/forts/securit
 function aggregateCandles(hourlyCandles, targetInterval) {
     if (!hourlyCandles || hourlyCandles.length === 0) return [];
     
-    // Для часового интервала возвращаем как есть
     if (targetInterval === '1h') {
         return hourlyCandles;
     }
@@ -20,15 +19,12 @@ function aggregateCandles(hourlyCandles, targetInterval) {
         let key;
         
         if (targetInterval === '1d') {
-            // Дневная агрегация: группируем по дате (без времени)
             key = date.toISOString().split('T')[0];
         } else if (targetInterval === '1wk') {
-            // Недельная агрегация: группируем по номеру недели
             const year = date.getFullYear();
             const week = getWeekNumber(date);
             key = `${year}-W${week}`;
         } else if (targetInterval === '1mo') {
-            // Месячная агрегация: группируем по месяцу
             key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         } else {
             return hourlyCandles;
@@ -48,13 +44,12 @@ function aggregateCandles(hourlyCandles, targetInterval) {
             const g = grouped[key];
             g.high = Math.max(g.high, candle.high);
             g.low = Math.min(g.low, candle.low);
-            g.close = candle.close; // последняя цена в группе
+            g.close = candle.close;
             g.volume = (g.volume || 0) + (candle.volume || 0);
             g.count++;
         }
     });
     
-    // Преобразуем обратно в массив и сортируем по дате
     return Object.values(grouped)
         .map(g => ({
             date: g.date,
@@ -78,15 +73,12 @@ function getWeekNumber(date) {
 // ============ ФЬЮЧЕРСЫ ============
 
 export async function fetchCandles(symbol, interval, limit = 150) {
-    // ВСЕГДА загружаем часовые данные (они есть у MOEX)
     const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities/${symbol}/candles.json`;
-    
-    // Запрашиваем больше часовых свечей для агрегации
     const hourlyLimit = Math.min(limit * 24, 2000);
     
     try {
         const params = new URLSearchParams({
-            interval: 60, // всегда часовой
+            interval: 60,
             limit: hourlyLimit
         });
         
@@ -107,10 +99,7 @@ export async function fetchCandles(symbol, interval, limit = 150) {
             volume: +candle[5] || 0
         }));
         
-        // Агрегируем до нужного таймфрейма
         const aggregated = aggregateCandles(hourly, interval);
-        
-        // Ограничиваем количество
         return aggregated.slice(-limit);
         
     } catch (error) {
@@ -169,18 +158,33 @@ export async function getActualFuturesTicker(assetCode) {
         const assetCodeIdx = columns.indexOf('ASSETCODE');
         const lastTradeDateIdx = columns.indexOf('LASTTRADEDATE');
         
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Находим ВСЕ контракты
         const contracts = securities
             .filter(row => row[assetCodeIdx] === assetCode)
             .map(row => ({
                 secid: row[secidIdx],
                 lastTradeDate: row[lastTradeDateIdx]
             }))
-            .filter(c => c.lastTradeDate);
+            .filter(c => c.secid && c.lastTradeDate);
         
         if (contracts.length === 0) return null;
         
-        contracts.sort((a, b) => new Date(b.lastTradeDate) - new Date(a.lastTradeDate));
-        return contracts[0].secid;
+        // 🔥 СОРТИРУЕМ ПО ВОЗРАСТАНИЮ (от самой ранней к самой поздней)
+        contracts.sort((a, b) => new Date(a.lastTradeDate) - new Date(b.lastTradeDate));
+        
+        // Ищем ближайший контракт с датой экспирации > сегодня
+        const futureContracts = contracts.filter(c => new Date(c.lastTradeDate) > today);
+        
+        if (futureContracts.length === 0) {
+            // Если нет будущих контрактов, берем самый поздний из доступных
+            return contracts[contracts.length - 1].secid;
+        }
+        
+        // Возвращаем самый ближайший (самый ранний) контракт
+        return futureContracts[0].secid;
         
     } catch (error) {
         console.error(`Ошибка получения тикера для ${assetCode}:`, error);
