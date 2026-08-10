@@ -3,7 +3,7 @@ import { fetchCandles, fetchStockCandles, getActualFuturesTickers } from './api/
 import { generateSignal } from './signals/generator.js';
 import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
-import { exportToExcel } from './utils/excel.js';.
+import { exportToExcel } from './utils/excel.js';
 
 // Кэш для тикеров
 let tickersCache = null;
@@ -19,13 +19,11 @@ async function getTickers() {
         addLog('🔄 Получение актуальных тикеров с MOEX...');
         const tickers = await getActualFuturesTickers(ASSET_CODES);
         
-        // Если автопоиск вернул пустой результат, используем запасные
         if (!tickers || Object.keys(tickers).length === 0) {
             addLog('⚠️ Автопоиск не сработал, использую запасные тикеры', 'warning');
             tickersCache = FALLBACK_TICKERS;
         } else {
             tickersCache = tickers;
-            // Дополняем недостающие тикеры из запасных
             for (const [key, value] of Object.entries(FALLBACK_TICKERS)) {
                 if (!tickersCache[key]) {
                     tickersCache[key] = value;
@@ -189,8 +187,8 @@ async function startScan() {
 
         try {
             let candles = isStocks 
-                ? await fetchStockCandles(ticker, interval, 200)
-                : await fetchCandles(ticker, interval, 300);
+                ? await fetchStockCandles(ticker, interval, 200)   // ← акции: 200 свечей
+                : await fetchCandles(ticker, interval, 300);       // ← фьючерсы: 300 свечей
 
             if (!candles || candles.length < 30) {
                 addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0})`, 'warning');
