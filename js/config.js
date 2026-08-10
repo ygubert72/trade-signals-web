@@ -1,6 +1,6 @@
 // js/config.js
 
-export const ASSET_CODES = {
+export const ASSET_CODES = {.
     // Индексы и валюты
     'RTS': 'RTS',
     'Si': 'Si',
