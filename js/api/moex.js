@@ -143,11 +143,11 @@ export async function fetchStockCandles(symbol, interval, limit = 150) {
     }
 }
 
-// ============ АВТОПОИСК ТИКЕРОВ ============
+// ============ АВТОПОИСК ТИКЕРОВ (АВТОМАТИЧЕСКИЙ ВЫБОР АКТИВНОГО КОНТРАКТА) ============
 
 export async function getActualFuturesTicker(assetCode) {
     try {
-        const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities.json?limit=200`;
+        const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities.json?limit=500`;
         const response = await fetch(url);
         const data = await response.json();
         
@@ -161,7 +161,7 @@ export async function getActualFuturesTicker(assetCode) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        // Находим ВСЕ контракты
+        // Находим ВСЕ контракты для данного актива
         const contracts = securities
             .filter(row => row[assetCodeIdx] === assetCode)
             .map(row => ({
@@ -194,11 +194,16 @@ export async function getActualFuturesTicker(assetCode) {
 
 export async function getActualFuturesTickers(symbols) {
     const result = {};
-    for (const [key, assetCode] of Object.entries(symbols)) {
+    const entries = Object.entries(symbols);
+    
+    // Загружаем параллельно для скорости
+    const promises = entries.map(async ([key, assetCode]) => {
         const ticker = await getActualFuturesTicker(assetCode);
         if (ticker) {
             result[key] = ticker;
         }
-    }
+    });
+    
+    await Promise.allSettled(promises);
     return result;
 }
