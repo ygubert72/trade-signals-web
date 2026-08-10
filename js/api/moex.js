@@ -159,10 +159,10 @@ export async function fetchContinuousCandles(assetCode, interval, limit = 150) {
     today.setHours(0, 0, 0, 0);
     
     // Берем последние 5 контрактов (достаточно для истории)
-    const recentContracts = contracts.slice(-5);
+    const recentContracts = contracts.slice(-10);
     
     for (const contract of recentContracts) {
-        const candles = await fetchSingleContractCandles(contract.secid, 500);
+        const candles = await fetchSingleContractCandles(contract.secid, 1000);
         if (candles.length > 0) {
             allCandles = allCandles.concat(candles);
         }
