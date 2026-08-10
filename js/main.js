@@ -189,7 +189,7 @@ async function startScan() {
 
         try {
             let candles = isStocks 
-                ? await fetchStockCandles(ticker, interval, 150)
+                ? await fetchStockCandles(ticker, interval, 200)
                 : await fetchCandles(ticker, interval, 300);
 
             if (!candles || candles.length < 30) {
