@@ -1,5 +1,3 @@
-// js/main.js (только измененная часть - функция startScan)
-
 import { FUTURES_LIST, STOCKS_LIST, INDICATORS, PATTERNS, ASSET_CODES, FALLBACK_TICKERS } from './config.js';
 import { fetchCandles, fetchStockCandles, getActualFuturesTickers } from './api/moex.js';
 import { generateSignal } from './signals/generator.js';
@@ -7,7 +5,124 @@ import { renderSignals } from './ui/render.js';
 import { addLog, clearLog } from './ui/log.js';
 import { exportToExcel } from './utils/excel.js';
 
-// ... (остальной код main.js без изменений до функции startScan)
+// Кэш для тикеров
+let tickersCache = null;
+let tickersCacheTime = null;
+const TICKERS_CACHE_TTL = 3600000; // 1 час
+
+async function getTickers() {
+    const now = Date.now();
+    if (tickersCache && tickersCacheTime && (now - tickersCacheTime < TICKERS_CACHE_TTL)) {
+        return tickersCache;
+    }
+    try {
+        addLog('🔄 Получение актуальных тикеров с MOEX...');
+        const tickers = await getActualFuturesTickers(ASSET_CODES);
+        
+        if (!tickers || Object.keys(tickers).length === 0) {
+            addLog('⚠️ Автопоиск не сработал, использую запасные тикеры', 'warning');
+            tickersCache = FALLBACK_TICKERS;
+        } else {
+            tickersCache = tickers;
+            for (const [key, value] of Object.entries(FALLBACK_TICKERS)) {
+                if (!tickersCache[key]) {
+                    tickersCache[key] = value;
+                }
+            }
+        }
+        
+        tickersCacheTime = now;
+        addLog(`✅ Получено ${Object.keys(tickersCache).length} тикеров`);
+        return tickersCache;
+    } catch (error) {
+        addLog(`⚠️ Ошибка получения тикеров, использую запасные: ${error.message}`, 'warning');
+        tickersCache = FALLBACK_TICKERS;
+        tickersCacheTime = now;
+        return tickersCache;
+    }
+}
+
+let state = {
+    timeframe: '24',
+    indicators: [],
+    patterns: [],
+    futures: [],
+    stocks: [],
+    results: [],
+    isScanning: false
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderInstruments();
+    renderPatterns();
+    setupEventListeners();
+});
+
+function renderInstruments() {
+    const futuresContainer = document.getElementById('futuresContainer');
+    if (futuresContainer) {
+        futuresContainer.innerHTML = Object.entries(FUTURES_LIST).map(([key, name]) => `
+            <label><input type="checkbox" value="${key}" data-group="futures"> ${name}</label>
+        `).join('');
+    }
+
+    const stocksContainer = document.getElementById('stocksContainer');
+    if (stocksContainer) {
+        stocksContainer.innerHTML = Object.entries(STOCKS_LIST).map(([key, name]) => `
+            <label><input type="checkbox" value="${key}" data-group="stocks"> ${name}</label>
+        `).join('');
+    }
+}
+
+function renderPatterns() {
+    const container = document.getElementById('patternsContainer');
+    if (container) {
+        container.innerHTML = Object.entries(PATTERNS).map(([key, name]) => `
+            <label><input type="checkbox" value="${key}"> ${name}</label>
+        `).join('');
+        updatePatternsCount();
+    }
+}
+
+function updatePatternsCount() {
+    const container = document.getElementById('patternsContainer');
+    if (!container) return;
+    const checked = container.querySelectorAll('input:checked').length;
+    const total = container.querySelectorAll('input').length;
+    const el = document.querySelector('.patterns-count');
+    if (el) {
+        if (checked === total && total > 0) {
+            el.textContent = '(выбрано: все)';
+        } else {
+            el.textContent = `(выбрано: ${checked}/${total})`;
+        }
+    }
+}
+
+function setupEventListeners() {
+    document.getElementById('scanBtn')?.addEventListener('click', startScan);
+    document.getElementById('exportBtn')?.addEventListener('click', () => exportToExcel(state.results));
+
+    document.getElementById('selectAllFutures')?.addEventListener('change', (e) => {
+        document.querySelectorAll('#futuresContainer input').forEach(cb => cb.checked = e.target.checked);
+    });
+
+    document.getElementById('selectAllStocks')?.addEventListener('change', (e) => {
+        document.querySelectorAll('#stocksContainer input').forEach(cb => cb.checked = e.target.checked);
+    });
+
+    document.getElementById('selectAllPatterns')?.addEventListener('click', () => {
+        document.querySelectorAll('#patternsContainer input').forEach(cb => cb.checked = true);
+        updatePatternsCount();
+    });
+
+    document.getElementById('deselectAllPatterns')?.addEventListener('click', () => {
+        document.querySelectorAll('#patternsContainer input').forEach(cb => cb.checked = false);
+        updatePatternsCount();
+    });
+
+    document.getElementById('patternsContainer')?.addEventListener('change', updatePatternsCount);
+}
 
 async function startScan() {
     if (state.isScanning) return;
@@ -53,7 +168,6 @@ async function startScan() {
     const interval = { '60': '1h', '24': '1d', '7': '1wk', '31': '1mo' }[state.timeframe] || '1d';
     const results = [];
 
-    // Параллельная загрузка
     const instrumentPromises = allSelected.map(async (key) => {
         const isFutures = selectedFutures.includes(key);
         const isStocks = selectedStocks.includes(key);
@@ -84,7 +198,7 @@ async function startScan() {
             const analysis = generateSignal(candles, {
                 indicators: selectedIndicators,
                 patterns: selectedPatterns,
-                timeframe: state.timeframe  // ← Добавлено!
+                timeframe: state.timeframe  // ← ЭТО САМОЕ ВАЖНОЕ!
             });
 
             const result = {
