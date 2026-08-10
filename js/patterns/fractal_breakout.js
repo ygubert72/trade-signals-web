@@ -1,13 +1,38 @@
 // js/patterns/fractal_breakout.js
 
-// Убираем глобальный кеш — теперь он будет храниться в экземпляре класса
-export class FractalBreakoutPattern {
+// Кэш с временем жизни (вместо простого Set)
+const signalCache = new Map();
+const CACHE_TTL = {
+    '1h': 4 * 60 * 60 * 1000,    // 4 часа для 1-часового таймфрейма
+    '1d': 3 * 24 * 60 * 60 * 1000, // 3 дня для дневного
+    '1wk': 14 * 24 * 60 * 60 * 1000, // 2 недели для недельного
+    '1mo': 30 * 24 * 60 * 60 * 1000  // 30 дней для месячного
+};
+
+// Глобальная переменная для хранения текущего таймфрейма
+let currentTimeframe = '1d';
+
+export function setFractalTimeframe(timeframe) {
+    currentTimeframe = timeframe;
+}
+
+export function clearFractalCache() {
+    signalCache.clear();
+}
+
+// Очистка устаревших записей
+function cleanExpiredCache() {
+    const now = Date.now();
+    for (const [key, data] of signalCache.entries()) {
+        if (now - data.timestamp > data.ttl) {
+            signalCache.delete(key);
+        }
+    }
+}
+
+class FractalBreakoutPattern {
     name = 'Пробой фрактальной линии (19)';
     confidence = 'medium';
-    
-    constructor() {
-        this.cache = new Set();
-    }
 
     findFractals(candles, left = 9, right = 9) {
         const highs = candles.map(c => c.high);
@@ -16,6 +41,7 @@ export class FractalBreakoutPattern {
         const lowerFractals = [];
 
         for (let i = left; i < candles.length - right; i++) {
+            // Верхний фрактал
             let isUpper = true;
             for (let j = 1; j <= left; j++) {
                 if (highs[i] <= highs[i - j]) { isUpper = false; break; }
@@ -23,8 +49,11 @@ export class FractalBreakoutPattern {
             for (let j = 1; j <= right; j++) {
                 if (highs[i] <= highs[i + j]) { isUpper = false; break; }
             }
-            if (isUpper) upperFractals.push({ index: i, price: highs[i] });
+            if (isUpper) {
+                upperFractals.push({ index: i, price: highs[i] });
+            }
 
+            // Нижний фрактал
             let isLower = true;
             for (let j = 1; j <= left; j++) {
                 if (lows[i] >= lows[i - j]) { isLower = false; break; }
@@ -32,20 +61,33 @@ export class FractalBreakoutPattern {
             for (let j = 1; j <= right; j++) {
                 if (lows[i] >= lows[i + j]) { isLower = false; break; }
             }
-            if (isLower) lowerFractals.push({ index: i, price: lows[i] });
+            if (isLower) {
+                lowerFractals.push({ index: i, price: lows[i] });
+            }
         }
 
         return { upperFractals, lowerFractals };
     }
 
-    detect(candles) {
+    detect(candles, timeframe = '1d') {
         if (candles.length < 40) return null;
+
+        // Устанавливаем текущий таймфрейм для кэша
+        setFractalTimeframe(timeframe);
+
+        // Очищаем устаревшие записи
+        cleanExpiredCache();
 
         const { upperFractals, lowerFractals } = this.findFractals(candles);
         const lastIdx = candles.length - 1;
         const lastClose = candles[lastIdx].close;
 
-        // BUY сигнал
+        // Получаем TTL для текущего таймфрейма
+        const ttl = CACHE_TTL[timeframe] || CACHE_TTL['1d'];
+
+        // ============================================
+        // BUY сигнал (пробой вверх)
+        // ============================================
         if (upperFractals.length >= 2) {
             const p1 = upperFractals[upperFractals.length - 2];
             const p2 = upperFractals[upperFractals.length - 1];
@@ -59,11 +101,21 @@ export class FractalBreakoutPattern {
                 const currLine = p1.price + slope * (lastIdx - p1.index);
 
                 const key = `BUY_${p1.index}_${p2.index}`;
-                // Используем кеш экземпляра
-                if (!this.cache.has(key)) {
+                
+                // Проверяем кэш
+                const cached = signalCache.get(key);
+                const now = Date.now();
+                
+                if (!cached || (now - cached.timestamp > cached.ttl)) {
+                    // Если кэша нет или он истек - проверяем пробой
                     const prevClose = candles[lastIdx - 1].close;
                     if (prevClose <= prevLine && lastClose > currLine) {
-                        this.cache.add(key);
+                        // Сохраняем в кэш с TTL
+                        signalCache.set(key, {
+                            timestamp: now,
+                            ttl: ttl,
+                            signal: 'BUY'
+                        });
                         return {
                             signal: 'BUY',
                             description: 'BUY при пробое трендовой линии по фракталам (19)',
@@ -71,10 +123,13 @@ export class FractalBreakoutPattern {
                         };
                     }
                 }
+                // Если кэш активен - пропускаем сигнал
             }
         }
 
-        // SELL сигнал
+        // ============================================
+        // SELL сигнал (пробой вниз)
+        // ============================================
         if (lowerFractals.length >= 2) {
             const p1 = lowerFractals[lowerFractals.length - 2];
             const p2 = lowerFractals[lowerFractals.length - 1];
@@ -88,10 +143,21 @@ export class FractalBreakoutPattern {
                 const currLine = p1.price + slope * (lastIdx - p1.index);
 
                 const key = `SELL_${p1.index}_${p2.index}`;
-                if (!this.cache.has(key)) {
+                
+                // Проверяем кэш
+                const cached = signalCache.get(key);
+                const now = Date.now();
+                
+                if (!cached || (now - cached.timestamp > cached.ttl)) {
+                    // Если кэша нет или он истек - проверяем пробой
                     const prevClose = candles[lastIdx - 1].close;
                     if (prevClose >= prevLine && lastClose < currLine) {
-                        this.cache.add(key);
+                        // Сохраняем в кэш с TTL
+                        signalCache.set(key, {
+                            timestamp: now,
+                            ttl: ttl,
+                            signal: 'SELL'
+                        });
                         return {
                             signal: 'SELL',
                             description: 'SELL при пробое трендовой линии по фракталам (19)',
@@ -99,9 +165,16 @@ export class FractalBreakoutPattern {
                         };
                     }
                 }
+                // Если кэш активен - пропускаем сигнал
             }
         }
 
         return null;
     }
 }
+
+// Создаем и экспортируем экземпляр паттерна
+export const fractalBreakoutPattern = new FractalBreakoutPattern();
+
+// Для обратной совместимости с PatternRegistry
+export class FractalBreakoutPatternClass extends FractalBreakoutPattern {}
