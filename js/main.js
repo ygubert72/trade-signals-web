@@ -192,7 +192,7 @@ async function startScan() {
                 ? await fetchStockCandles(ticker, interval, 150)
                 : await fetchCandles(ticker, interval, 150);
 
-            if (!candles || candles.length < 30) {
+            if (!candles || candles.length < 20) {
                 addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0})`, 'warning');
                 return null;
             }
