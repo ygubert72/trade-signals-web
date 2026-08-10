@@ -1,174 +1,123 @@
 // js/api/moex.js
 
-const MOEX_API = 'https://iss.moex.com/iss';
-const CACHE_TTL = 300000; // 5 минут
-const cache = new Map();
+// Базовый URL для API MOEX
+const MOEX_API = 'https://iss.moex.com/iss/engines/futures/markets/forts/securities';
 
-// ============ КЭШИРОВАНИЕ ============
-
-function getCached(url) {
-    const cached = cache.get(url);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return cached.data;
-    }
-    return null;
-}
-
-function setCache(url, data) {
-    cache.set(url, { data, timestamp: Date.now() });
-}
-
-// ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
-
-async function fetchWithRetry(url, retries = 3, delay = 1000) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            const cached = getCached(url);
-            if (cached) return cached;
-            
-            const response = await fetch(url);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            setCache(url, data);
-            return data;
-            
-        } catch (error) {
-            if (i === retries - 1) throw error;
-            await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
-        }
-    }
-    return null;
-}
-
-function parseCandles(candlesData) {
-    if (!candlesData || !candlesData.length) return [];
-    
-    return candlesData.map(candle => ({
-        date: new Date(candle[6]),
-        open: Number(candle[0]),
-        high: Number(candle[2]),
-        low: Number(candle[3]),
-        close: Number(candle[1]),
-        volume: Number(candle[5]) || 0
-    }));
-}
-
-// ============ ФЬЮЧЕРСЫ С FALLBACK ============
+// ============ ФЬЮЧЕРСЫ ============
 
 export async function fetchCandles(symbol, interval, limit = 150) {
-    if (!symbol) return [];
+    // Маппинг интервалов
+    const intervalMap = { '1h': 60, '1d': 24, '1wk': 7, '1mo': 31 };
+    const moexInterval = intervalMap[interval] || 24;
     
-    // Маппинг интервалов MOEX
-    const intervalMap = {
-        '1h': 60,
-        '1d': 24,
-        '1wk': 7,
-        '1mo': 31
-    };
+    const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities/${symbol}/candles.json`;
     
-    // Пробуем разные интервалы, если основной не работает
-    const intervalsToTry = [intervalMap[interval] || 24, 60, 10, 5];
-    const uniqueIntervals = [...new Set(intervalsToTry)];
-    
-    for (const moexInterval of uniqueIntervals) {
-        try {
-            const url = `${MOEX_API}/engines/futures/markets/forts/securities/${symbol}/candles.json`;
-            const params = new URLSearchParams({
-                interval: moexInterval,
-                limit: Math.min(limit, 500)
-            });
-            
-            const data = await fetchWithRetry(`${url}?${params.toString()}`);
-            const candlesData = data?.candles?.data || [];
-            
-            if (candlesData.length > 0) {
-                return parseCandles(candlesData);
-            }
-        } catch (error) {
-            // Пробуем следующий интервал
-            continue;
-        }
-    }
-    
-    // Если ничего не загрузилось, пробуем без интервала (по умолчанию 24)
+    // Пробуем запросить данные с выбранным интервалом
     try {
-        const url = `${MOEX_API}/engines/futures/markets/forts/securities/${symbol}/candles.json`;
         const params = new URLSearchParams({
+            interval: moexInterval,
             limit: Math.min(limit, 500)
         });
-        const data = await fetchWithRetry(`${url}?${params.toString()}`);
+        
+        const response = await fetch(`${url}?${params.toString()}`);
+        const data = await response.json();
         const candlesData = data?.candles?.data || [];
-        return parseCandles(candlesData);
+        
+        if (candlesData.length > 0) {
+            return candlesData.map(candle => ({
+                date: new Date(candle[6]),
+                open: +candle[0],
+                high: +candle[2],
+                low: +candle[3],
+                close: +candle[1],
+                volume: +candle[5] || 0
+            }));
+        }
     } catch (error) {
-        console.error(`Ошибка загрузки фьючерса ${symbol}:`, error);
-        return [];
+        console.error(`Ошибка загрузки данных для ${symbol} с интервалом ${moexInterval}:`, error);
     }
+    
+    // Если данных нет - пробуем часовой интервал (60) как запасной
+    try {
+        const params = new URLSearchParams({
+            interval: 60,
+            limit: Math.min(limit * 2, 500)
+        });
+        
+        const response = await fetch(`${url}?${params.toString()}`);
+        const data = await response.json();
+        const candlesData = data?.candles?.data || [];
+        
+        if (candlesData.length > 0) {
+            return candlesData.map(candle => ({
+                date: new Date(candle[6]),
+                open: +candle[0],
+                high: +candle[2],
+                low: +candle[3],
+                close: +candle[1],
+                volume: +candle[5] || 0
+            }));
+        }
+    } catch (error) {
+        console.error(`Ошибка загрузки часовых данных для ${symbol}:`, error);
+    }
+    
+    return [];
 }
 
-// ============ АКЦИИ С FALLBACK ============
-
-export async function fetchStockCandles(symbol, interval, limit = 150) {
-    if (!symbol) return [];
-    
-    const moexSymbol = symbol.replace('.ME', '');
-    
-    const intervalMap = {
-        '1h': 60,
-        '1d': 24,
-        '1wk': 7,
-        '1mo': 31
-    };
-    
-    // Пробуем разные интервалы
-    const intervalsToTry = [intervalMap[interval] || 24, 60, 10, 5];
-    const uniqueIntervals = [...new Set(intervalsToTry)];
-    
-    for (const moexInterval of uniqueIntervals) {
-        try {
-            const url = `${MOEX_API}/engines/stock/markets/shares/boards/tqbr/securities/${moexSymbol}/candles.json`;
-            const params = new URLSearchParams({
-                interval: moexInterval,
-                limit: Math.min(limit, 500)
-            });
-            
-            const data = await fetchWithRetry(`${url}?${params.toString()}`);
-            const candlesData = data?.candles?.data || [];
-            
-            if (candlesData.length > 0) {
-                return parseCandles(candlesData);
-            }
-        } catch (error) {
-            continue;
+export async function fetchAllSymbols(symbols, interval, limit = 150) {
+    const results = {};
+    for (const [key, symbol] of Object.entries(symbols)) {
+        const candles = await fetchCandles(symbol, interval, limit);
+        if (candles.length) {
+            results[key] = candles;
         }
     }
+    return results;
+}
+
+// ============ АКЦИИ ============
+
+export async function fetchStockCandles(symbol, interval, limit = 150) {
+    const moexSymbol = symbol.replace('.ME', '');
     
-    // Пробуем без интервала
+    const intervalMap = { '1h': 60, '1d': 24, '1wk': 7, '1mo': 31 };
+    const moexInterval = intervalMap[interval] || 24;
+    
+    const limitMap = { '1h': 200, '1d': 150, '1wk': 100, '1mo': 60 };
+    const moexLimit = limitMap[interval] || 150;
+    
     try {
-        const url = `${MOEX_API}/engines/stock/markets/shares/boards/tqbr/securities/${moexSymbol}/candles.json`;
-        const params = new URLSearchParams({
-            limit: Math.min(limit, 500)
-        });
-        const data = await fetchWithRetry(`${url}?${params.toString()}`);
+        const url = `https://iss.moex.com/iss/engines/stock/markets/shares/boards/tqbr/securities/${moexSymbol}/candles.json`;
+        const params = new URLSearchParams({ interval: moexInterval, limit: moexLimit });
+        
+        const response = await fetch(`${url}?${params.toString()}`);
+        const data = await response.json();
+        
         const candlesData = data?.candles?.data || [];
-        return parseCandles(candlesData);
+        if (!candlesData.length) return [];
+        
+        return candlesData.map(candle => ({
+            date: new Date(candle[6]),
+            open: +candle[0],
+            high: +candle[2],
+            low: +candle[3],
+            close: +candle[1],
+            volume: +candle[5] || 0
+        }));
     } catch (error) {
         console.error(`Ошибка загрузки акции ${symbol}:`, error);
         return [];
     }
 }
 
-// ============ АВТОПОИСК ТИКЕРОВ ФЬЮЧЕРСОВ ============
+// ============ АВТОПОИСК ТИКЕРОВ ============
 
 export async function getActualFuturesTicker(assetCode) {
-    if (!assetCode) return null;
-    
     try {
-        const url = `${MOEX_API}/engines/futures/markets/forts/securities.json?limit=200`;
-        const data = await fetchWithRetry(url);
+        const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities.json?limit=200`;
+        const response = await fetch(url);
+        const data = await response.json();
         
         const securities = data?.securities?.data || [];
         const columns = data?.securities?.columns || [];
@@ -189,12 +138,7 @@ export async function getActualFuturesTicker(assetCode) {
         
         if (contracts.length === 0) return null;
         
-        contracts.sort((a, b) => {
-            const dateA = new Date(a.lastTradeDate);
-            const dateB = new Date(b.lastTradeDate);
-            return dateB - dateA;
-        });
-        
+        contracts.sort((a, b) => new Date(b.lastTradeDate) - new Date(a.lastTradeDate));
         return contracts[0].secid;
         
     } catch (error) {
@@ -204,59 +148,12 @@ export async function getActualFuturesTicker(assetCode) {
 }
 
 export async function getActualFuturesTickers(symbols) {
-    if (!symbols || typeof symbols !== 'object') return {};
-    
     const result = {};
-    const entries = Object.entries(symbols);
-    
-    const promises = entries.map(async ([key, assetCode]) => {
+    for (const [key, assetCode] of Object.entries(symbols)) {
         const ticker = await getActualFuturesTicker(assetCode);
         if (ticker) {
             result[key] = ticker;
         }
-    });
-    
-    await Promise.allSettled(promises);
-    return result;
-}
-
-// ============ ПОЛУЧЕНИЕ ВСЕХ ТИКЕРОВ СРАЗУ ============
-
-export async function getAllFuturesTickers(limit = 200) {
-    try {
-        const url = `${MOEX_API}/engines/futures/markets/forts/securities.json?limit=${limit}`;
-        const data = await fetchWithRetry(url);
-        
-        const securities = data?.securities?.data || [];
-        const columns = data?.securities?.columns || [];
-        
-        const secidIdx = columns.indexOf('SECID');
-        const assetCodeIdx = columns.indexOf('ASSETCODE');
-        const lastTradeDateIdx = columns.indexOf('LASTTRADEDATE');
-        const shortNameIdx = columns.indexOf('SHORTNAME');
-        
-        const tickers = {};
-        
-        securities.forEach(row => {
-            const secid = row[secidIdx];
-            const assetCode = row[assetCodeIdx];
-            const lastTradeDate = row[lastTradeDateIdx];
-            
-            if (secid && assetCode && lastTradeDate) {
-                if (!tickers[assetCode] || new Date(lastTradeDate) > new Date(tickers[assetCode].date)) {
-                    tickers[assetCode] = {
-                        secid: secid,
-                        date: lastTradeDate,
-                        shortName: row[shortNameIdx] || ''
-                    };
-                }
-            }
-        });
-        
-        return tickers;
-        
-    } catch (error) {
-        console.error('Ошибка получения всех тикеров:', error);
-        return {};
     }
+    return result;
 }
