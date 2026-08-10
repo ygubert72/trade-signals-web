@@ -3,77 +3,120 @@
 // Базовый URL для API MOEX
 const MOEX_API = 'https://iss.moex.com/iss/engines/futures/markets/forts/securities';
 
+// ============ АГРЕГАЦИЯ ДАННЫХ ============
+
+function aggregateCandles(hourlyCandles, targetInterval) {
+    if (!hourlyCandles || hourlyCandles.length === 0) return [];
+    
+    // Для часового интервала возвращаем как есть
+    if (targetInterval === '1h') {
+        return hourlyCandles;
+    }
+    
+    const grouped = {};
+    
+    hourlyCandles.forEach(candle => {
+        const date = new Date(candle.date);
+        let key;
+        
+        if (targetInterval === '1d') {
+            // Дневная агрегация: группируем по дате (без времени)
+            key = date.toISOString().split('T')[0];
+        } else if (targetInterval === '1wk') {
+            // Недельная агрегация: группируем по номеру недели
+            const year = date.getFullYear();
+            const week = getWeekNumber(date);
+            key = `${year}-W${week}`;
+        } else if (targetInterval === '1mo') {
+            // Месячная агрегация: группируем по месяцу
+            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        } else {
+            return hourlyCandles;
+        }
+        
+        if (!grouped[key]) {
+            grouped[key] = {
+                date: new Date(date),
+                open: candle.open,
+                high: candle.high,
+                low: candle.low,
+                close: candle.close,
+                volume: candle.volume || 0,
+                count: 1
+            };
+        } else {
+            const g = grouped[key];
+            g.high = Math.max(g.high, candle.high);
+            g.low = Math.min(g.low, candle.low);
+            g.close = candle.close; // последняя цена в группе
+            g.volume = (g.volume || 0) + (candle.volume || 0);
+            g.count++;
+        }
+    });
+    
+    // Преобразуем обратно в массив и сортируем по дате
+    return Object.values(grouped)
+        .map(g => ({
+            date: g.date,
+            open: g.open,
+            high: g.high,
+            low: g.low,
+            close: g.close,
+            volume: g.volume || 0
+        }))
+        .sort((a, b) => a.date - b.date);
+}
+
+function getWeekNumber(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
 // ============ ФЬЮЧЕРСЫ ============
 
 export async function fetchCandles(symbol, interval, limit = 150) {
-    // Маппинг интервалов
-    const intervalMap = { '1h': 60, '1d': 24, '1wk': 7, '1mo': 31 };
-    const moexInterval = intervalMap[interval] || 24;
-    
+    // ВСЕГДА загружаем часовые данные (они есть у MOEX)
     const url = `https://iss.moex.com/iss/engines/futures/markets/forts/securities/${symbol}/candles.json`;
     
-    // Пробуем запросить данные с выбранным интервалом
+    // Запрашиваем больше часовых свечей для агрегации
+    const hourlyLimit = Math.min(limit * 24, 2000);
+    
     try {
         const params = new URLSearchParams({
-            interval: moexInterval,
-            limit: Math.min(limit, 500)
+            interval: 60, // всегда часовой
+            limit: hourlyLimit
         });
         
         const response = await fetch(`${url}?${params.toString()}`);
         const data = await response.json();
         const candlesData = data?.candles?.data || [];
         
-        if (candlesData.length > 0) {
-            return candlesData.map(candle => ({
-                date: new Date(candle[6]),
-                open: +candle[0],
-                high: +candle[2],
-                low: +candle[3],
-                close: +candle[1],
-                volume: +candle[5] || 0
-            }));
+        if (!candlesData || candlesData.length === 0) {
+            return [];
         }
-    } catch (error) {
-        console.error(`Ошибка загрузки данных для ${symbol} с интервалом ${moexInterval}:`, error);
-    }
-    
-    // Если данных нет - пробуем часовой интервал (60) как запасной
-    try {
-        const params = new URLSearchParams({
-            interval: 60,
-            limit: Math.min(limit * 2, 500)
-        });
         
-        const response = await fetch(`${url}?${params.toString()}`);
-        const data = await response.json();
-        const candlesData = data?.candles?.data || [];
+        const hourly = candlesData.map(candle => ({
+            date: new Date(candle[6]),
+            open: +candle[0],
+            high: +candle[2],
+            low: +candle[3],
+            close: +candle[1],
+            volume: +candle[5] || 0
+        }));
         
-        if (candlesData.length > 0) {
-            return candlesData.map(candle => ({
-                date: new Date(candle[6]),
-                open: +candle[0],
-                high: +candle[2],
-                low: +candle[3],
-                close: +candle[1],
-                volume: +candle[5] || 0
-            }));
-        }
+        // Агрегируем до нужного таймфрейма
+        const aggregated = aggregateCandles(hourly, interval);
+        
+        // Ограничиваем количество
+        return aggregated.slice(-limit);
+        
     } catch (error) {
-        console.error(`Ошибка загрузки часовых данных для ${symbol}:`, error);
+        console.error(`Ошибка загрузки данных для ${symbol}:`, error);
+        return [];
     }
-    
-    return [];
-}
-
-export async function fetchAllSymbols(symbols, interval, limit = 150) {
-    const results = {};
-    for (const [key, symbol] of Object.entries(symbols)) {
-        const candles = await fetchCandles(symbol, interval, limit);
-        if (candles.length) {
-            results[key] = candles;
-        }
-    }
-    return results;
 }
 
 // ============ АКЦИИ ============
@@ -125,16 +168,14 @@ export async function getActualFuturesTicker(assetCode) {
         const secidIdx = columns.indexOf('SECID');
         const assetCodeIdx = columns.indexOf('ASSETCODE');
         const lastTradeDateIdx = columns.indexOf('LASTTRADEDATE');
-        const shortNameIdx = columns.indexOf('SHORTNAME');
         
         const contracts = securities
             .filter(row => row[assetCodeIdx] === assetCode)
             .map(row => ({
                 secid: row[secidIdx],
-                lastTradeDate: row[lastTradeDateIdx],
-                shortName: row[shortNameIdx] || ''
+                lastTradeDate: row[lastTradeDateIdx]
             }))
-            .filter(c => c.secid && c.lastTradeDate);
+            .filter(c => c.lastTradeDate);
         
         if (contracts.length === 0) return null;
         
