@@ -3,16 +3,11 @@
 export const ASSET_CODES = {
     // Индексы и валюты
     'RTS': 'RTS',
-    'MX': 'MIX',
     'RVI': 'RVI',
     'Si': 'Si',
-    'Eu': 'EUR/RUB',
-    'CNY': 'CNY/RUB',
     'BR': 'BR',
     'GOLD': 'GOLD',
     'SILV': 'SILV',
-    'PLAT': 'PLAT',
-    'PALL': 'PALL',
     'COPPER': 'COPPER',
     
     // Фьючерсы на акции
@@ -22,23 +17,16 @@ export const ASSET_CODES = {
     'SBRF': 'SBRF',
     'VTBR': 'VTBR',
     'TATN': 'TATN',
-    'NVTK': 'NVTK',
-    'PLZL': 'PLZL',
     'GMKN': 'GMKN'
 };
 
 export const FUTURES_LIST = {
     'RTS': 'Индекс РТС',
-    'MX': 'Индекс МосБиржи',
     'RVI': 'Индекс волатильности',
     'Si': 'Доллар-рубль',
-    'Eu': 'Евро-рубль',
-    'CNY': 'Юань-рубль',
     'BR': 'Нефть Brent',
     'GOLD': 'Золото',
     'SILV': 'Серебро',
-    'PLAT': 'Платина',
-    'PALL': 'Палладий',
     'COPPER': 'Медь',
     'ROSN': 'Роснефть',
     'GAZR': 'Газпром',
@@ -46,8 +34,6 @@ export const FUTURES_LIST = {
     'SBRF': 'Сбербанк',
     'VTBR': 'ВТБ',
     'TATN': 'Татнефть',
-    'NVTK': 'НОВАТЭК',
-    'PLZL': 'Полюс',
     'GMKN': 'Норникель'
 };
 
@@ -105,16 +91,11 @@ export const PATTERNS = {
 
 export const FALLBACK_TICKERS = {
     'RTS': 'RTS-6.25',
-    'MX': 'MIX-6.25',
     'RVI': 'RVI-6.25',
     'Si': 'Si-6.25',
-    'Eu': 'Eu-6.25',
-    'CNY': 'CNY-6.25',
     'BR': 'BR-6.25',
     'GOLD': 'AU-6.25',
     'SILV': 'AG-6.25',
-    'PLAT': 'PT-6.25',
-    'PALL': 'PD-6.25',
     'COPPER': 'CU-6.25',
     'ROSN': 'ROSN-6.25',
     'GAZR': 'GAZR-6.25',
@@ -122,7 +103,5 @@ export const FALLBACK_TICKERS = {
     'SBRF': 'SBRF-6.25',
     'VTBR': 'VTBR-6.25',
     'TATN': 'TATN-6.25',
-    'NVTK': 'NVTK-6.25',
-    'PLZL': 'PLZL-6.25',
     'GMKN': 'GMKN-6.25'
 };
