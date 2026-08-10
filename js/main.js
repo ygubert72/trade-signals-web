@@ -188,7 +188,7 @@ async function startScan() {
         try {
             let candles = isStocks 
                 ? await fetchStockCandles(ticker, interval, 200)   // ← акции: 200 свечей
-                : await fetchCandles(ticker, interval, 300);       // ← фьючерсы: 300 свечей
+                : await fetchCandles(key, interval, 300);       // ← фьючерсы: 300 свечей
 
             if (!candles || candles.length < 30) {
                 addLog(`  ⚠️ ${displayName}: недостаточно данных (${candles?.length || 0})`, 'warning');
