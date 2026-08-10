@@ -23,7 +23,6 @@ function setCache(url, data) {
 async function fetchWithRetry(url, retries = 3, delay = 1000) {
     for (let i = 0; i < retries; i++) {
         try {
-            // Проверяем кэш
             const cached = getCached(url);
             if (cached) return cached;
             
@@ -58,7 +57,7 @@ function parseCandles(candlesData) {
     }));
 }
 
-// ============ ФЬЮЧЕРСЫ ============
+// ============ ФЬЮЧЕРСЫ С FALLBACK ============
 
 export async function fetchCandles(symbol, interval, limit = 150) {
     if (!symbol) return [];
@@ -70,15 +69,37 @@ export async function fetchCandles(symbol, interval, limit = 150) {
         '1wk': 7,
         '1mo': 31
     };
-    const moexInterval = intervalMap[interval] || 24;
     
-    const url = `${MOEX_API}/engines/futures/markets/forts/securities/${symbol}/candles.json`;
-    const params = new URLSearchParams({
-        interval: moexInterval,
-        limit: Math.min(limit, 500)
-    });
+    // Пробуем разные интервалы, если основной не работает
+    const intervalsToTry = [intervalMap[interval] || 24, 60, 10, 5];
+    const uniqueIntervals = [...new Set(intervalsToTry)];
     
+    for (const moexInterval of uniqueIntervals) {
+        try {
+            const url = `${MOEX_API}/engines/futures/markets/forts/securities/${symbol}/candles.json`;
+            const params = new URLSearchParams({
+                interval: moexInterval,
+                limit: Math.min(limit, 500)
+            });
+            
+            const data = await fetchWithRetry(`${url}?${params.toString()}`);
+            const candlesData = data?.candles?.data || [];
+            
+            if (candlesData.length > 0) {
+                return parseCandles(candlesData);
+            }
+        } catch (error) {
+            // Пробуем следующий интервал
+            continue;
+        }
+    }
+    
+    // Если ничего не загрузилось, пробуем без интервала (по умолчанию 24)
     try {
+        const url = `${MOEX_API}/engines/futures/markets/forts/securities/${symbol}/candles.json`;
+        const params = new URLSearchParams({
+            limit: Math.min(limit, 500)
+        });
         const data = await fetchWithRetry(`${url}?${params.toString()}`);
         const candlesData = data?.candles?.data || [];
         return parseCandles(candlesData);
@@ -88,7 +109,7 @@ export async function fetchCandles(symbol, interval, limit = 150) {
     }
 }
 
-// ============ АКЦИИ ============
+// ============ АКЦИИ С FALLBACK ============
 
 export async function fetchStockCandles(symbol, interval, limit = 150) {
     if (!symbol) return [];
@@ -101,15 +122,36 @@ export async function fetchStockCandles(symbol, interval, limit = 150) {
         '1wk': 7,
         '1mo': 31
     };
-    const moexInterval = intervalMap[interval] || 24;
     
-    const url = `${MOEX_API}/engines/stock/markets/shares/boards/tqbr/securities/${moexSymbol}/candles.json`;
-    const params = new URLSearchParams({
-        interval: moexInterval,
-        limit: Math.min(limit, 500)
-    });
+    // Пробуем разные интервалы
+    const intervalsToTry = [intervalMap[interval] || 24, 60, 10, 5];
+    const uniqueIntervals = [...new Set(intervalsToTry)];
     
+    for (const moexInterval of uniqueIntervals) {
+        try {
+            const url = `${MOEX_API}/engines/stock/markets/shares/boards/tqbr/securities/${moexSymbol}/candles.json`;
+            const params = new URLSearchParams({
+                interval: moexInterval,
+                limit: Math.min(limit, 500)
+            });
+            
+            const data = await fetchWithRetry(`${url}?${params.toString()}`);
+            const candlesData = data?.candles?.data || [];
+            
+            if (candlesData.length > 0) {
+                return parseCandles(candlesData);
+            }
+        } catch (error) {
+            continue;
+        }
+    }
+    
+    // Пробуем без интервала
     try {
+        const url = `${MOEX_API}/engines/stock/markets/shares/boards/tqbr/securities/${moexSymbol}/candles.json`;
+        const params = new URLSearchParams({
+            limit: Math.min(limit, 500)
+        });
         const data = await fetchWithRetry(`${url}?${params.toString()}`);
         const candlesData = data?.candles?.data || [];
         return parseCandles(candlesData);
@@ -136,7 +178,6 @@ export async function getActualFuturesTicker(assetCode) {
         const lastTradeDateIdx = columns.indexOf('LASTTRADEDATE');
         const shortNameIdx = columns.indexOf('SHORTNAME');
         
-        // Находим все контракты для данного актива
         const contracts = securities
             .filter(row => row[assetCodeIdx] === assetCode)
             .map(row => ({
@@ -148,14 +189,12 @@ export async function getActualFuturesTicker(assetCode) {
         
         if (contracts.length === 0) return null;
         
-        // Сортируем по дате истечения (ближайший - последний)
         contracts.sort((a, b) => {
             const dateA = new Date(a.lastTradeDate);
             const dateB = new Date(b.lastTradeDate);
             return dateB - dateA;
         });
         
-        // Берем ближайший контракт
         return contracts[0].secid;
         
     } catch (error) {
@@ -170,7 +209,6 @@ export async function getActualFuturesTickers(symbols) {
     const result = {};
     const entries = Object.entries(symbols);
     
-    // Загружаем параллельно для скорости
     const promises = entries.map(async ([key, assetCode]) => {
         const ticker = await getActualFuturesTicker(assetCode);
         if (ticker) {
